@@ -1,0 +1,47 @@
+# Job Pipeline Configuration
+# Search settings for JobSpy
+
+search:
+  site_name:
+    - linkedin
+    - indeed
+    - glassdoor
+    - google
+  search_terms:
+    - "forward deployed engineer"
+    - "forward deployed software engineer"
+    - "AI engineer"
+    - "simulation software engineer"
+    - "robotics software engineer"
+    - "machine learning infrastructure engineer"
+    - "agentic systems engineer"
+    - "software engineer"
+  location: "United Kingdom"
+  results_wanted: 30
+  hours_old: 25
+  country_indeed: "UK"
+
+# Scoring configuration
+scoring:
+  salary_floor: 40000
+  currency: "GBP"
+
+# Excluded keywords (case-insensitive) - skip jobs matching these
+exclusions:
+  title_keywords:
+    - senior
+    - staff
+    - principal
+    - lead
+    - director
+    - vice president
+    - junior
+    - intern
+    - internship
+    - sales
+    - marketing
+  description_keywords:
+    - unpaid
+    - graduate scheme
+    - graduate programme
+    - graduate program

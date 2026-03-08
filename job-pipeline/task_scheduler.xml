@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Job Pipeline - Daily job search and scoring</Description>
+    <Author>JobPipeline</Author>
+  </RegistrationInfo>
+  
+  <Triggers>
+    <!-- Run daily at 08:00 -->
+    <CalendarTrigger>
+      <StartBoundary>2026-03-09T08:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+    
+    <!-- Also run at user logon (optional) -->
+    <LogonTrigger>
+      <Enabled>false</Enabled>
+      <Delay>PT5M</Delay>
+    </LogonTrigger>
+  </Triggers>
+  
+  <Principals>
+    <Principal id="Author">
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>true</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  
+  <Actions Context="Author">
+    <!--
+    IMPORTANT: Update these paths before using!
+    
+    Replace the following placeholders:
+    - C:\path\to\job-pipeline: Your actual project path
+    - C:\path\to\python.exe: Path to your Python executable (or venv python)
+    
+    To find your Python path, run: where python
+    To use venv Python: C:\path\to\job-pipeline\venv\Scripts\python.exe
+    -->
+    <Exec>
+      <Command>C:\path\to\job-pipeline\venv\Scripts\python.exe</Command>
+      <Arguments>discovery\run_search.py</Arguments>
+      <WorkingDirectory>C:\path\to\job-pipeline</WorkingDirectory>
+    </Exec>
+    
+    <!-- Run scoring after search -->
+    <Exec>
+      <Command>C:\path\to\job-pipeline\venv\Scripts\python.exe</Command>
+      <Arguments>discovery\scorer.py</Arguments>
+      <WorkingDirectory>C:\path\to\job-pipeline</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
