@@ -6,7 +6,7 @@ A personal job application pipeline that aggregates jobs from multiple sources, 
 
 - **Multi-source job search**: Scrapes LinkedIn, Indeed, Glassdoor, and Google Jobs using JobSpy
 - **Smart deduplication**: Removes duplicate listings across sources using fuzzy matching
-- **AI-powered scoring**: Uses OpenAI GPT-4o to evaluate job fit against your profile
+- **AI-powered scoring**: Uses OpenAI GPT-4o mini to evaluate job fit against your profile
 - **Hard filters**: Automatically excludes jobs that don't meet your criteria (salary, seniority, keywords)
 - **Interactive review**: Terminal-based dashboard for reviewing and queuing jobs
 - **Scheduled runs**: Can run automatically on a schedule using Windows Task Scheduler

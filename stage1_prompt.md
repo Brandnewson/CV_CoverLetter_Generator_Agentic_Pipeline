@@ -294,7 +294,7 @@ def score_job(job: dict, profile: dict, client: ChatGPT) -> dict:
         "fit_summary": "One paragraph, max 80 words",
         "keyword_matches": {"matched": [...], "missing": [...]}
     }
-    Use chatGPT-4o. Prompt must request JSON only.
+    Use chatGPT-4o mini. Prompt must request JSON only.
     """
 
 def score_pending_jobs(conn, profile: dict, client: ChatGPT) -> int:

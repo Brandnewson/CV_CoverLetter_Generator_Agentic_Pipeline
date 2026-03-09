@@ -138,7 +138,7 @@ Return this exact JSON structure:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a job fit scoring assistant. Return only valid JSON."},
                 {"role": "user", "content": prompt}
