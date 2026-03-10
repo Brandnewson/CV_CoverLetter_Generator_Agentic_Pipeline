@@ -31,6 +31,13 @@ uv sync
 uv run python setup_db.py
 ```
 
+Frontend setup (one-time):
+
+```powershell
+cd job-pipeline/frontend
+pnpm install
+```
+
 Create `.env` from `.env.example` and set:
 
 - `DATABASE_URL`
@@ -64,6 +71,30 @@ uv run python dashboard/cv_builder_ui.py
 ```
 
 Open `http://127.0.0.1:5051/`.
+
+### Frontend (React) dev server
+
+Run this in a separate terminal:
+
+```powershell
+cd job-pipeline/frontend
+pnpm run dev
+```
+
+Then open the Vite URL shown in terminal (usually `http://localhost:5173`, but it may auto-increment to `5174+` if ports are busy).
+
+Important:
+
+- The frontend proxies `/api/*` to `http://localhost:5051` via `vite.config.ts`.
+- Keep `uv run python dashboard/cv_builder_ui.py` running, or the frontend will show proxy `ECONNREFUSED` errors.
+
+### Frontend production build
+
+```powershell
+cd job-pipeline/frontend
+pnpm run build
+pnpm run preview
+```
 
 ## Fast verification
 
@@ -113,6 +144,8 @@ Test files map one-to-one to their modules:
 - Model 404 from Anthropic: `CLAUDE_MODEL` is not available to your key.
 - Empty builder UI: template map has zero bullet slots.
 - Plan API 500: missing profile assets or DB schema mismatch.
+- Frontend `/api` errors in browser console: backend is not running on `127.0.0.1:5051`.
+- Vite import resolution errors after branch switches: stop all old dev servers, then rerun `pnpm run dev`.
 
 ## Docs
 

@@ -78,3 +78,16 @@ desktop.ini
 *.db
 *.sqlite
 *.sqlite3
+
+# Frontend dependencies/build caches
+job-pipeline/frontend/node_modules/
+job-pipeline/frontend/dist/
+job-pipeline/frontend/.vite/
+job-pipeline/frontend/.turbo/
+job-pipeline/frontend/coverage/
+
+# Frontend env/local editor noise
+job-pipeline/frontend/.env
+job-pipeline/frontend/.env.local
+job-pipeline/frontend/.env.*.local
+job-pipeline/frontend/.DS_Store
