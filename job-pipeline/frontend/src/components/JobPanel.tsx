@@ -103,11 +103,29 @@ export function JobPanel({
     )
   }
 
+  const dbMatchedKeywords = job?.keyword_matches?.matched ?? []
+  const requiredKeywords =
+    (plan?.required_keywords?.length ?? 0) > 0
+      ? plan?.required_keywords ?? []
+      : dbMatchedKeywords
+  const niceToHaveKeywords = plan?.nice_to_have_keywords ?? []
+  const technicalKeywords = plan?.technical_keywords ?? []
+
   const allKeywords = [
-    ...(plan?.required_keywords ?? []),
-    ...(plan?.nice_to_have_keywords ?? []),
-    ...(plan?.technical_keywords ?? []),
+    ...requiredKeywords,
+    ...niceToHaveKeywords,
+    ...technicalKeywords,
   ]
+
+  const descriptionText = (job?.description ?? '').trim()
+
+  const postedDate = job?.date_posted
+    ? new Date(`${job.date_posted}T00:00:00`).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null
 
   return (
     <div className="h-full p-4 overflow-y-auto bg-bg-surface">
@@ -121,6 +139,9 @@ export function JobPanel({
             {job.title}
           </h1>
           <p className="text-xs text-text-secondary">{job.location}</p>
+          {postedDate && (
+            <p className="text-xs text-text-muted">Posted: {postedDate}</p>
+          )}
 
           {plan && (
             <div className="flex items-center gap-2 mt-2">
@@ -168,8 +189,8 @@ export function JobPanel({
               Required
             </p>
             <div className="flex flex-wrap gap-1">
-              {plan.required_keywords.map((kw) => {
-                const isUncovered = plan.uncovered_keywords.includes(kw)
+              {requiredKeywords.map((kw) => {
+                const isUncovered = (plan?.uncovered_keywords ?? []).includes(kw)
                 return (
                   <KeywordTag
                     key={kw}
@@ -178,17 +199,20 @@ export function JobPanel({
                   />
                 )
               })}
+              {requiredKeywords.length === 0 && (
+                <p className="text-xs text-text-muted">No required keywords found in DB for this job.</p>
+              )}
             </div>
           </div>
 
           {/* Nice to have keywords */}
-          {plan.nice_to_have_keywords.length > 0 && (
+          {niceToHaveKeywords.length > 0 && (
             <div>
               <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
                 Nice to Have
               </p>
               <div className="flex flex-wrap gap-1">
-                {plan.nice_to_have_keywords.map((kw) => (
+                {niceToHaveKeywords.map((kw) => (
                   <KeywordTag key={kw} keyword={kw} variant="nice-to-have" />
                 ))}
               </div>
@@ -196,14 +220,14 @@ export function JobPanel({
           )}
 
           {/* Technical keywords */}
-          {plan.technical_keywords.length > 0 && (
+          {technicalKeywords.length > 0 && (
             <div>
               <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
                 Technical
               </p>
               <div className="flex flex-wrap gap-1">
-                {plan.technical_keywords.map((kw) => {
-                  const isUncovered = plan.uncovered_keywords.includes(kw)
+                {technicalKeywords.map((kw) => {
+                  const isUncovered = (plan?.uncovered_keywords ?? []).includes(kw)
                   return (
                     <KeywordTag
                       key={kw}
@@ -227,10 +251,14 @@ export function JobPanel({
             Description
           </p>
           <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-            <HighlightedDescription
-              text={job.description}
-              keywords={allKeywords}
-            />
+            {descriptionText ? (
+              <HighlightedDescription
+                text={descriptionText}
+                keywords={allKeywords}
+              />
+            ) : (
+              <span className="text-text-muted">No description available in PostgreSQL for this posting.</span>
+            )}
           </div>
         </div>
       )}

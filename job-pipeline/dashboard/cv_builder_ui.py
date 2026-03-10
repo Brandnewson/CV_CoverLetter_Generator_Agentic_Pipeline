@@ -81,7 +81,8 @@ def get_job_by_id(conn, job_id: int) -> dict | None:
             SELECT 
                 j.id, j.title, j.company, j.location, j.description,
                 j.salary_min, j.salary_max, j.job_url, j.source,
-                js.status, js.fit_score, js.fit_summary
+                j.date_posted,
+                js.status, js.fit_score, js.fit_summary, js.keyword_matches
             FROM jobs j
             JOIN job_status js ON js.job_id = j.id
             WHERE j.id = %s
@@ -99,9 +100,11 @@ def get_job_by_id(conn, job_id: int) -> dict | None:
             "salary_max": row[6],
             "job_url": row[7],
             "source": row[8],
-            "status": row[9],
-            "fit_score": row[10],
-            "fit_summary": row[11]
+            "date_posted": row[9].isoformat() if row[9] else None,
+            "status": row[10],
+            "fit_score": row[11],
+            "fit_summary": row[12],
+            "keyword_matches": row[13] or {}
         }
 
 
@@ -136,13 +139,34 @@ def get_latest_queued_job_id(conn) -> int | None:
 
 def build_plan_for_job(conn, job: dict, user_id: int = 1):
     """Build a CVSelectionPlan for a job."""
+    db_keyword_matches = (job.get("keyword_matches") or {}).get("matched", [])
+    job_description = (job.get("description") or "").strip()
+    fallback_description = (job.get("fit_summary") or "").strip()
+    description_for_parsing = job_description or fallback_description
+
     # Classify the job
-    role_family = classify_role_family(job["title"], job["description"])
-    seniority_level = classify_seniority(job["title"], job["description"])
+    role_family = classify_role_family(job["title"], description_for_parsing)
+    seniority_level = classify_seniority(job["title"], description_for_parsing)
     
     # Extract keywords (uses LLM)
-    client = anthropic.Anthropic()
-    keywords = extract_keywords(job["description"], role_family, client)
+    if description_for_parsing:
+        client = anthropic.Anthropic()
+        keywords = extract_keywords(description_for_parsing, role_family, client)
+    else:
+        keywords = {
+            "required_keywords": [],
+            "nice_to_have_keywords": [],
+            "technical_skills": [],
+            "soft_skills": [],
+            "domain_keywords": [],
+            "seniority_signals": [],
+        }
+
+    if not keywords.get("required_keywords") and db_keyword_matches:
+        keywords["required_keywords"] = db_keyword_matches[:10]
+
+    if not job_description and fallback_description:
+        job["description"] = fallback_description
     
     # Load resources
     bullet_bank = load_bullet_bank(BULLET_BANK_PATH)

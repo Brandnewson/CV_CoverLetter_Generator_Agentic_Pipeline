@@ -58,9 +58,14 @@ export interface Job {
   salary_max: number | null
   job_url: string
   source: string
+  date_posted: string | null
   status: string
   fit_score: number
   fit_summary: string
+  keyword_matches?: {
+    matched?: string[]
+    missing?: string[]
+  }
 }
 
 export interface QueuedJob {
