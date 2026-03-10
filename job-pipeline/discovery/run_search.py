@@ -5,10 +5,14 @@ from typing import Any
 import os
 import time
 from datetime import date
+from datetime import datetime
 
 import psycopg2
+import psycopg2.extras
 import yaml
 from dotenv import load_dotenv
+
+from discovery.enrichment import build_enrichment
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -23,38 +27,68 @@ def load_config() -> dict:
 
 def run_search(config: dict, search_term: str) -> list[dict]:
     """
-    Run JobSpy for one search term.
+    Run JobSpy for one search term across all configured sources.
+    
+    Runs each source individually for fault isolation - a failure on one
+    source (e.g., rate limiting) won't affect others.
     
     Args:
         config: Configuration dictionary with search settings
         search_term: The job search query
         
     Returns:
-        List of normalised job dictionaries
+        List of normalised job dictionaries from all successful sources
     """
     from jobspy import scrape_jobs
     
     search_config = config.get("search", {})
+    sites = search_config.get("site_name", ["linkedin", "indeed"])
     
-    try:
-        jobs_df = scrape_jobs(
-            site_name=search_config.get("site_name", ["linkedin", "indeed"]),
-            search_term=search_term,
-            location=search_config.get("location", "United Kingdom"),
-            results_wanted=search_config.get("results_wanted", 30),
-            hours_old=search_config.get("hours_old", 25),
-            country_indeed=search_config.get("country_indeed", "UK"),
-        )
-        
-        jobs = []
-        for _, row in jobs_df.iterrows():
-            job = normalise_job(row, search_term)
-            jobs.append(job)
-        
-        return jobs
-    except Exception as e:
-        print(f"Error running search for '{search_term}': {e}")
-        return []
+    # Ensure sites is a list
+    if isinstance(sites, str):
+        sites = [sites]
+    
+    all_jobs = []
+    
+    # Run each source individually for fault isolation
+    for site in sites:
+        try:
+            # Glassdoor requires city-level location without "UK" suffix
+            location = search_config.get("location", "London, UK")
+            if site == "glassdoor":
+                # Strip country suffix for Glassdoor
+                location = location.split(",")[0].strip()
+            
+            jobs_df = scrape_jobs(
+                site_name=[site],
+                search_term=search_term,
+                location=location,
+                results_wanted=search_config.get("results_wanted", 30),
+                hours_old=search_config.get("hours_old", 25),
+                country_indeed=search_config.get("country_indeed", "UK") if site == "indeed" else "usa",
+                linkedin_fetch_description=search_config.get("linkedin_fetch_description", True) if site == "linkedin" else False,
+                description_format=search_config.get("description_format", "markdown"),
+            )
+            
+            if jobs_df is not None and len(jobs_df) > 0:
+                for _, row in jobs_df.iterrows():
+                    job = normalise_job(row, search_term)
+                    all_jobs.append(job)
+                print(f"  {site}: {len(jobs_df)} jobs")
+            else:
+                print(f"  {site}: 0 jobs")
+                
+        except Exception as e:
+            # Log but continue - don't let one source failure kill the whole search
+            error_msg = str(e)
+            if "429" in error_msg:
+                print(f"  {site}: rate limited (429)")
+            elif "location not parsed" in error_msg.lower():
+                print(f"  {site}: location not supported")
+            else:
+                print(f"  {site}: error - {error_msg[:80]}")
+    
+    return all_jobs
 
 
 def normalise_job(raw_row: Any, search_term: str = "") -> dict:
@@ -84,6 +118,13 @@ def normalise_job(raw_row: Any, search_term: str = "") -> dict:
             return value
         except (AttributeError, KeyError):
             return default
+
+    def pick_first_text(keys: list[str]) -> str:
+        for key in keys:
+            value = safe_get(key, "")
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
     
     # Determine remote type
     is_remote = safe_get("is_remote", False)
@@ -123,6 +164,9 @@ def normalise_job(raw_row: Any, search_term: str = "") -> dict:
         except ValueError:
             date_posted = date.today()
     
+    job_description_raw = pick_first_text(["description", "job_description"])
+    company_description_raw = pick_first_text(["company_description", "company_about", "about_company"]) 
+
     return {
         "source": safe_get("site", "unknown"),
         "external_id": str(safe_get("id", "")),
@@ -134,7 +178,9 @@ def normalise_job(raw_row: Any, search_term: str = "") -> dict:
         "salary_max": salary_max,
         "currency": safe_get("currency", "GBP"),
         "job_url": safe_get("job_url", ""),
-        "description": safe_get("description", ""),
+        "description": job_description_raw,
+        "job_description_raw": job_description_raw,
+        "company_description_raw": company_description_raw,
         "date_posted": date_posted,
         "search_term": search_term,
     }
@@ -158,14 +204,15 @@ def insert_jobs(jobs: list[dict], conn, search_term: str) -> tuple[int, int]:
     with conn.cursor() as cur:
         for job in jobs:
             try:
+                cur.execute("SAVEPOINT job_insert")
                 cur.execute("""
                     INSERT INTO jobs (
                         source, external_id, company, title, location,
                         remote_type, salary_min, salary_max, currency,
-                        job_url, description, date_posted, search_term
+                        job_url, description, job_description_raw, company_description_raw,
+                        date_posted, search_term
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (company, title, date_posted) DO NOTHING
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     job["source"],
@@ -179,20 +226,48 @@ def insert_jobs(jobs: list[dict], conn, search_term: str) -> tuple[int, int]:
                     job["currency"],
                     job["job_url"],
                     job["description"],
+                    job["job_description_raw"],
+                    job["company_description_raw"],
                     job["date_posted"],
                     job["search_term"],
                 ))
                 result = cur.fetchone()
                 if result:
-                    new_inserted += 1
+                    inserted_job_id = result[0]
                     # Also create a job_status entry for the new job
                     cur.execute("""
                         INSERT INTO job_status (job_id, status)
                         VALUES (%s, 'new')
                         ON CONFLICT (job_id) DO NOTHING
-                    """, (result[0],))
+                    """, (inserted_job_id,))
+
+                    # Enrich and persist discovery-time keywords once per inserted job.
+                    enrichment = build_enrichment(job["job_description_raw"])
+                    cur.execute(
+                        """
+                        UPDATE jobs
+                        SET enrichment_keywords = %s,
+                            enrichment_version = %s,
+                            enriched_at = %s
+                        WHERE id = %s
+                        """,
+                        (
+                            psycopg2.extras.Json({
+                                "technologies": enrichment["technologies"],
+                                "skills": enrichment["skills"],
+                                "abilities": enrichment["abilities"],
+                            }),
+                            enrichment["version"],
+                            datetime.fromisoformat(enrichment["enriched_at"]),
+                            inserted_job_id,
+                        ),
+                    )
+                    new_inserted += 1
             except Exception as e:
+                cur.execute("ROLLBACK TO SAVEPOINT job_insert")
                 print(f"Error inserting job '{job.get('title', 'unknown')}': {e}")
+            finally:
+                cur.execute("RELEASE SAVEPOINT job_insert")
         
         conn.commit()
     

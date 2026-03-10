@@ -7,6 +7,8 @@ search:
     - indeed
     - glassdoor
     - google
+  linkedin_fetch_description: true
+  description_format: "markdown"
   search_terms:
     - "forward deployed engineer"
     - "forward deployed software engineer"
@@ -16,7 +18,7 @@ search:
     - "machine learning infrastructure engineer"
     - "agentic systems engineer"
     - "software engineer"
-  location: "United Kingdom"
+  location: "London, UK"
   results_wanted: 30
   hours_old: 25
   country_indeed: "UK"

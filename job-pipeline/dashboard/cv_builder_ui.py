@@ -13,7 +13,7 @@ from flask_cors import CORS
 from agent.bullet_rephraser import rephrase_bullet
 from agent.bullet_selector import build_selection_plan, load_bullet_bank
 from agent.cv_renderer import render_cv
-from agent.jd_parser import classify_role_family, classify_seniority, extract_keywords
+from agent.jd_parser import classify_role_family, classify_seniority
 from agent.story_drafter import approve_bullet_for_bank
 from agent.template_extractor import load_template_map
 from agent.validators import UserSelections
@@ -80,6 +80,7 @@ def get_job_by_id(conn, job_id: int) -> dict | None:
         cur.execute("""
             SELECT 
                 j.id, j.title, j.company, j.location, j.description,
+                j.job_description_raw, j.company_description_raw, j.enrichment_keywords,
                 j.salary_min, j.salary_max, j.job_url, j.source,
                 j.date_posted,
                 js.status, js.fit_score, js.fit_summary, js.keyword_matches
@@ -96,15 +97,18 @@ def get_job_by_id(conn, job_id: int) -> dict | None:
             "company": row[2],
             "location": row[3],
             "description": row[4] or "",
-            "salary_min": row[5],
-            "salary_max": row[6],
-            "job_url": row[7],
-            "source": row[8],
-            "date_posted": row[9].isoformat() if row[9] else None,
-            "status": row[10],
-            "fit_score": row[11],
-            "fit_summary": row[12],
-            "keyword_matches": row[13] or {}
+            "job_description_raw": row[5] or "",
+            "company_description_raw": row[6] or "",
+            "enrichment_keywords": row[7] or {},
+            "salary_min": row[8],
+            "salary_max": row[9],
+            "job_url": row[10],
+            "source": row[11],
+            "date_posted": row[12].isoformat() if row[12] else None,
+            "status": row[13],
+            "fit_score": row[14],
+            "fit_summary": row[15],
+            "keyword_matches": row[16] or {}
         }
 
 
@@ -116,6 +120,9 @@ def get_queued_jobs(conn) -> list[dict]:
             FROM jobs j
             JOIN job_status js ON js.job_id = j.id
             WHERE js.status = 'queued'
+              AND NULLIF(BTRIM(COALESCE(j.job_description_raw, '')), '') IS NOT NULL
+              AND j.enrichment_keywords IS NOT NULL
+              AND jsonb_typeof(j.enrichment_keywords) = 'object'
             ORDER BY js.fit_score DESC
         """)
         jobs = []
@@ -139,34 +146,25 @@ def get_latest_queued_job_id(conn) -> int | None:
 
 def build_plan_for_job(conn, job: dict, user_id: int = 1):
     """Build a CVSelectionPlan for a job."""
-    db_keyword_matches = (job.get("keyword_matches") or {}).get("matched", [])
-    job_description = (job.get("description") or "").strip()
-    fallback_description = (job.get("fit_summary") or "").strip()
-    description_for_parsing = job_description or fallback_description
+    job_description = (job.get("job_description_raw") or "").strip()
+    enrichment_keywords = job.get("enrichment_keywords") or {}
+
+    technologies = enrichment_keywords.get("technologies", [])
+    skills = enrichment_keywords.get("skills", [])
+    abilities = enrichment_keywords.get("abilities", [])
+
+    keywords = {
+        "required_keywords": technologies,
+        "nice_to_have_keywords": abilities,
+        "technical_skills": technologies,
+        "soft_skills": skills,
+        "domain_keywords": abilities,
+        "seniority_signals": [],
+    }
 
     # Classify the job
-    role_family = classify_role_family(job["title"], description_for_parsing)
-    seniority_level = classify_seniority(job["title"], description_for_parsing)
-    
-    # Extract keywords (uses LLM)
-    if description_for_parsing:
-        client = anthropic.Anthropic()
-        keywords = extract_keywords(description_for_parsing, role_family, client)
-    else:
-        keywords = {
-            "required_keywords": [],
-            "nice_to_have_keywords": [],
-            "technical_skills": [],
-            "soft_skills": [],
-            "domain_keywords": [],
-            "seniority_signals": [],
-        }
-
-    if not keywords.get("required_keywords") and db_keyword_matches:
-        keywords["required_keywords"] = db_keyword_matches[:10]
-
-    if not job_description and fallback_description:
-        job["description"] = fallback_description
+    role_family = classify_role_family(job["title"], job_description)
+    seniority_level = classify_seniority(job["title"], job_description)
     
     # Load resources
     bullet_bank = load_bullet_bank(BULLET_BANK_PATH)

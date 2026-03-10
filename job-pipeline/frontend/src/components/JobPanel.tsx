@@ -103,21 +103,14 @@ export function JobPanel({
     )
   }
 
-  const dbMatchedKeywords = job?.keyword_matches?.matched ?? []
-  const requiredKeywords =
-    (plan?.required_keywords?.length ?? 0) > 0
-      ? plan?.required_keywords ?? []
-      : dbMatchedKeywords
-  const niceToHaveKeywords = plan?.nice_to_have_keywords ?? []
-  const technicalKeywords = plan?.technical_keywords ?? []
+  const technologies = job?.enrichment_keywords?.technologies ?? []
+  const skills = job?.enrichment_keywords?.skills ?? []
+  const abilities = job?.enrichment_keywords?.abilities ?? []
 
-  const allKeywords = [
-    ...requiredKeywords,
-    ...niceToHaveKeywords,
-    ...technicalKeywords,
-  ]
+  const allKeywords = [...technologies, ...skills, ...abilities]
 
-  const descriptionText = (job?.description ?? '').trim()
+  const companyDescriptionText = (job?.company_description_raw ?? '').trim()
+  const jobDescriptionText = (job?.job_description_raw ?? '').trim()
 
   const postedDate = job?.date_posted
     ? new Date(`${job.date_posted}T00:00:00`).toLocaleDateString('en-GB', {
@@ -180,65 +173,66 @@ export function JobPanel({
 
       <Separator className="my-4 bg-border-subtle" />
 
-      {/* Keywords section */}
-      {plan && (
+      {/* Discovery Keywords section */}
+      {job && (
         <div className="space-y-3">
-          {/* Required keywords */}
           <div>
             <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
-              Required
+              Keywords
             </p>
             <div className="flex flex-wrap gap-1">
-              {requiredKeywords.map((kw) => {
-                const isUncovered = (plan?.uncovered_keywords ?? []).includes(kw)
-                return (
-                  <KeywordTag
-                    key={kw}
-                    keyword={kw}
-                    variant={isUncovered ? 'uncovered' : 'required'}
-                  />
-                )
-              })}
-              {requiredKeywords.length === 0 && (
-                <p className="text-xs text-text-muted">No required keywords found in DB for this job.</p>
-              )}
+              {technologies.map((kw) => (
+                <KeywordTag key={`tech-${kw}`} keyword={kw} variant="required" />
+              ))}
             </div>
           </div>
 
-          {/* Nice to have keywords */}
-          {niceToHaveKeywords.length > 0 && (
+          {skills.length > 0 && (
             <div>
               <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
-                Nice to Have
+                Skills
               </p>
               <div className="flex flex-wrap gap-1">
-                {niceToHaveKeywords.map((kw) => (
-                  <KeywordTag key={kw} keyword={kw} variant="nice-to-have" />
+                {skills.map((kw) => (
+                  <KeywordTag key={`skill-${kw}`} keyword={kw} variant="nice-to-have" />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Technical keywords */}
-          {technicalKeywords.length > 0 && (
+          {abilities.length > 0 && (
             <div>
               <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
-                Technical
+                Abilities
               </p>
               <div className="flex flex-wrap gap-1">
-                {technicalKeywords.map((kw) => {
-                  const isUncovered = (plan?.uncovered_keywords ?? []).includes(kw)
-                  return (
-                    <KeywordTag
-                      key={kw}
-                      keyword={kw}
-                      variant={isUncovered ? 'uncovered' : 'required'}
-                    />
-                  )
-                })}
+                {abilities.map((kw) => (
+                  <KeywordTag key={`ability-${kw}`} keyword={kw} variant="required" />
+                ))}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      <Separator className="my-4 bg-border-subtle" />
+
+      {/* Company description */}
+      {job && (
+        <div>
+          <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
+            Company Description
+          </p>
+          <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
+            {companyDescriptionText ? (
+              <HighlightedDescription
+                text={companyDescriptionText}
+                keywords={allKeywords}
+              />
+            ) : (
+              <span className="text-text-muted">No company description captured during discovery.</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -248,16 +242,16 @@ export function JobPanel({
       {job && (
         <div>
           <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
-            Description
+            Job Description
           </p>
           <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
-            {descriptionText ? (
+            {jobDescriptionText ? (
               <HighlightedDescription
-                text={descriptionText}
+                text={jobDescriptionText}
                 keywords={allKeywords}
               />
             ) : (
-              <span className="text-text-muted">No description available in PostgreSQL for this posting.</span>
+              <span className="text-text-muted">No job description captured during discovery.</span>
             )}
           </div>
         </div>

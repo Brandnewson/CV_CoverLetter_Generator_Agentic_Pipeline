@@ -38,6 +38,9 @@ def get_top_jobs(conn, limit: int = 20) -> list[dict]:
               AND j.date_discovered > NOW() - INTERVAL '48 hours'
               AND j.is_duplicate = FALSE
               AND js.fit_score IS NOT NULL
+                            AND NULLIF(BTRIM(COALESCE(j.job_description_raw, '')), '') IS NOT NULL
+                            AND j.enrichment_keywords IS NOT NULL
+                            AND jsonb_typeof(j.enrichment_keywords) = 'object'
             ORDER BY js.fit_score DESC
             LIMIT %s
         """, (limit,))
@@ -67,7 +70,15 @@ def mark_job_queued(conn, job_id: int) -> bool:
         cur.execute("""
             UPDATE job_status
             SET status = 'queued', status_updated = NOW()
-            WHERE job_id = %s
+                        WHERE job_id = %s
+                            AND EXISTS (
+                                    SELECT 1
+                                    FROM jobs j
+                                    WHERE j.id = job_status.job_id
+                                        AND NULLIF(BTRIM(COALESCE(j.job_description_raw, '')), '') IS NOT NULL
+                                        AND j.enrichment_keywords IS NOT NULL
+                                        AND jsonb_typeof(j.enrichment_keywords) = 'object'
+                            )
             RETURNING job_id
         """, (job_id,))
         

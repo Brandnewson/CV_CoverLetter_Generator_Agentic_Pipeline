@@ -54,6 +54,13 @@ export interface Job {
   company: string
   location: string
   description: string
+  job_description_raw: string
+  company_description_raw: string
+  enrichment_keywords: {
+    technologies: string[]
+    skills: string[]
+    abilities: string[]
+  }
   salary_min: number | null
   salary_max: number | null
   job_url: string

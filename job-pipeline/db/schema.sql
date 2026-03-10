@@ -16,12 +16,16 @@ CREATE TABLE IF NOT EXISTS jobs (
     currency        TEXT DEFAULT 'GBP',
     job_url         TEXT NOT NULL,
     description     TEXT,
+    job_description_raw TEXT,
+    company_description_raw TEXT,
+    enrichment_keywords JSONB,
+    enrichment_version TEXT,
+    enriched_at TIMESTAMPTZ,
     date_posted     DATE,
     date_discovered TIMESTAMPTZ DEFAULT NOW(),
     is_duplicate    BOOLEAN DEFAULT FALSE,
     duplicate_of    INTEGER REFERENCES jobs(id),
-    search_term     TEXT,
-    UNIQUE (company, title, date_posted)
+    search_term     TEXT
 );
 
 -- Your scoring + decisions per job
@@ -101,6 +105,8 @@ CREATE TABLE IF NOT EXISTS search_runs (
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company);
 CREATE INDEX IF NOT EXISTS idx_jobs_date_discovered ON jobs(date_discovered);
+CREATE INDEX IF NOT EXISTS idx_jobs_date_posted ON jobs(date_posted);
+CREATE INDEX IF NOT EXISTS idx_jobs_enriched_at ON jobs(enriched_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_is_duplicate ON jobs(is_duplicate);
 CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_status_status ON job_status(status);
