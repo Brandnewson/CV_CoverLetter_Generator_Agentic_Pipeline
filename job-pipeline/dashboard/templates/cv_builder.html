@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV Builder</title>
+    <style>
+        /* GitHub Dark Theme */
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-cyan: #00d4ff;
+            --accent-cyan-dim: #00a8cc;
+            --amber: #f0a500;
+            --red: #ff4444;
+            --green: #3fb950;
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        /* Main Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Left Panel - Job Info (22%) */
+        .left-panel {
+            width: 22%;
+            min-width: 280px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Center Panel - Bullet Builder (48%) */
+        .center-panel {
+            width: 48%;
+            background-color: var(--bg-primary);
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Right Panel - Preview (30%) */
+        .right-panel {
+            width: 30%;
+            min-width: 300px;
+            background-color: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Section Headers */
+        .section-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .subsection-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin: 16px 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Job Info */
+        .job-card {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .job-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .job-company {
+            font-size: 14px;
+            color: var(--accent-cyan);
+            margin-top: 4px;
+        }
+
+        .job-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        /* Keywords */
+        .keyword-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .keyword-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 11px;
+            border-radius: 12px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .keyword-tag.required {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .keyword-tag.covered {
+            background-color: rgba(63, 185, 80, 0.2);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* Queued Jobs List */
+        .queue-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .queue-item:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .queue-item.active {
+            border-color: var(--accent-cyan);
+            background-color: rgba(0, 212, 255, 0.1);
+        }
+
+        .queue-score {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-right: 8px;
+            min-width: 40px;
+        }
+
+        .queue-job-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .queue-job-title {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .queue-job-company {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Bullet Slot */
+        .bullet-slot {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+
+        .bullet-slot:hover {
+            border-color: var(--accent-cyan-dim);
+        }
+
+        .bullet-slot.approved {
+            border-color: var(--green);
+            background-color: rgba(63, 185, 80, 0.1);
+        }
+
+        .slot-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .slot-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .slot-score {
+            font-size: 11px;
+            color: var(--accent-cyan);
+            background-color: var(--bg-tertiary);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* Bullet Text */
+        .bullet-text {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 12px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+
+        /* Character Counter */
+        .char-counter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            margin-bottom: 12px;
+        }
+
+        .char-count {
+            font-weight: 600;
+        }
+
+        .char-count.green { color: var(--green); }
+        .char-count.amber { color: var(--amber); }
+        .char-count.red { color: var(--red); }
+
+        .char-bar {
+            flex: 1;
+            height: 4px;
+            background-color: var(--bg-tertiary);
+            border-radius: 2px;
+            margin: 0 12px;
+            overflow: hidden;
+        }
+
+        .char-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s, background-color 0.3s;
+        }
+
+        .char-bar-fill.green { background-color: var(--green); }
+        .char-bar-fill.amber { background-color: var(--amber); }
+        .char-bar-fill.red { background-color: var(--red); }
+
+        /* Keyword Hits */
+        .keyword-hits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .keyword-hit {
+            font-size: 10px;
+            padding: 1px 6px;
+            background-color: rgba(0, 212, 255, 0.2);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            color: var(--accent-cyan);
+        }
+
+        /* Action Buttons */
+        .slot-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn:hover {
+            background-color: var(--bg-secondary);
+            border-color: var(--accent-cyan);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-accept {
+            background-color: rgba(63, 185, 80, 0.2);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .btn-accept:hover {
+            background-color: rgba(63, 185, 80, 0.3);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-cyan-dim);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        /* Warnings */
+        .warnings {
+            margin-top: 8px;
+        }
+
+        .warning-item {
+            font-size: 11px;
+            color: var(--amber);
+            padding: 4px 0;
+        }
+
+        .warning-item::before {
+            content: "⚠ ";
+        }
+
+        /* Preview */
+        .preview-section {
+            margin-bottom: 24px;
+        }
+
+        .preview-subsection {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 12px 0 8px 0;
+        }
+
+        .preview-bullet {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            line-height: 1.5;
+            padding: 8px;
+            margin: 4px 0;
+            background-color: var(--bg-tertiary);
+            border-radius: 4px;
+            border-left: 2px solid var(--border-color);
+        }
+
+        .preview-bullet.approved {
+            border-left-color: var(--green);
+        }
+
+        .preview-bullet.pending {
+            border-left-color: var(--amber);
+        }
+
+        .preview-char {
+            font-size: 10px;
+            float: right;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .preview-char.green { background-color: rgba(63, 185, 80, 0.2); color: var(--green); }
+        .preview-char.amber { background-color: rgba(240, 165, 0, 0.2); color: var(--amber); }
+        .preview-char.red { background-color: rgba(255, 68, 68, 0.2); color: var(--red); }
+
+        /* Generate Button */
+        .generate-section {
+            position: sticky;
+            bottom: 0;
+            background-color: var(--bg-secondary);
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            margin: 0 -16px -16px -16px;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .status-message.error {
+            background-color: rgba(255, 68, 68, 0.2);
+            border: 1px solid var(--red);
+            color: var(--red);
+        }
+
+        .status-message.success {
+            background-color: rgba(63, 185, 80, 0.2);
+            border: 1px solid var(--green);
+            color: var(--green);
+        }
+
+        .status-message.loading {
+            background-color: rgba(0, 212, 255, 0.2);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Rephrase History */
+        .rephrase-history {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .rephrase-toggle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .rephrase-toggle:hover {
+            color: var(--accent-cyan);
+        }
+
+        .rephrase-list {
+            margin-top: 8px;
+        }
+
+        .rephrase-item {
+            font-size: 11px;
+            color: var(--text-secondary);
+            padding: 6px 8px;
+            margin: 4px 0;
+            background-color: var(--bg-primary);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .rephrase-item:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Panel - Job Info -->
+        <div class="left-panel">
+            <div class="section-header">Job Information</div>
+            
+            <div id="job-info" class="job-card">
+                <div class="job-title" id="job-title">Loading...</div>
+                <div class="job-company" id="job-company"></div>
+                <div class="job-meta" id="job-meta"></div>
+            </div>
+
+            <div class="subsection-header">Required Keywords</div>
+            <div id="required-keywords" class="keyword-list"></div>
+
+            <div class="subsection-header">Nice to Have</div>
+            <div id="nice-keywords" class="keyword-list"></div>
+
+            <div class="subsection-header">Technical Skills</div>
+            <div id="tech-keywords" class="keyword-list"></div>
+
+            <div class="section-header" style="margin-top: 24px;">Queued Jobs</div>
+            <div id="queued-jobs"></div>
+        </div>
+
+        <!-- Center Panel - Bullet Builder -->
+        <div class="center-panel">
+            <div class="section-header">Bullet Builder</div>
+            
+            <div id="status-message" class="status-message loading hidden"></div>
+            
+            <div id="work-experience-section">
+                <!-- Work Experience bullets will be rendered here -->
+            </div>
+
+            <div id="technical-projects-section">
+                <!-- Technical Project bullets will be rendered here -->
+            </div>
+
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-state-icon">📄</div>
+                <div>Loading CV plan...</div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Preview -->
+        <div class="right-panel">
+            <div class="section-header">Live Preview</div>
+            
+            <div id="preview-content">
+                <!-- Preview will be rendered here -->
+            </div>
+
+            <div class="generate-section">
+                <button id="generate-btn" class="btn btn-primary generate-btn" disabled>
+                    Generate CV
+                </button>
+                <div id="download-link" class="hidden" style="margin-top: 12px; text-align: center;">
+                    <a href="#" id="download-btn" class="btn btn-primary" style="text-decoration: none;">
+                        Download CV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentJobId = {{ job_id if job_id else 'null' }};
+        let plan = null;
+        let approvedSlots = new Set();
+
+        // DOM Elements
+        const jobTitle = document.getElementById('job-title');
+        const jobCompany = document.getElementById('job-company');
+        const jobMeta = document.getElementById('job-meta');
+        const requiredKeywords = document.getElementById('required-keywords');
+        const niceKeywords = document.getElementById('nice-keywords');
+        const techKeywords = document.getElementById('tech-keywords');
+        const queuedJobs = document.getElementById('queued-jobs');
+        const workExperienceSection = document.getElementById('work-experience-section');
+        const technicalProjectsSection = document.getElementById('technical-projects-section');
+        const previewContent = document.getElementById('preview-content');
+        const generateBtn = document.getElementById('generate-btn');
+        const downloadLink = document.getElementById('download-link');
+        const downloadBtn = document.getElementById('download-btn');
+        const statusMessage = document.getElementById('status-message');
+        const emptyState = document.getElementById('empty-state');
+
+        // Helpers
+        function getCharCountClass(count) {
+            if (count <= 90) return 'green';
+            if (count <= 110) return 'amber';
+            return 'red';
+        }
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+            statusMessage.classList.add('hidden');
+        }
+
+        function renderKeywords(container, keywords, covered = []) {
+            container.innerHTML = '';
+            keywords.forEach(kw => {
+                const tag = document.createElement('span');
+                tag.className = 'keyword-tag';
+                if (covered.includes(kw.toLowerCase())) {
+                    tag.classList.add('covered');
+                }
+                tag.textContent = kw;
+                container.appendChild(tag);
+            });
+        }
+
+        function getCoveredKeywords() {
+            const covered = [];
+            if (plan) {
+                [...plan.work_experience_slots, ...plan.technical_project_slots].forEach(slot => {
+                    if (slot.current_candidate && slot.current_candidate.keyword_hits) {
+                        covered.push(...slot.current_candidate.keyword_hits.map(k => k.toLowerCase()));
+                    }
+                });
+            }
+            return [...new Set(covered)];
+        }
+
+        function renderJobInfo() {
+            if (!plan || !plan.job) return;
+            
+            const job = plan.job;
+            jobTitle.textContent = job.title || 'Unknown Title';
+            jobCompany.textContent = job.company || 'Unknown Company';
+            
+            const meta = [];
+            if (job.location) meta.push(job.location);
+            if (job.fit_score) meta.push(`Score: ${job.fit_score.toFixed(2)}`);
+            if (plan.role_family) meta.push(plan.role_family);
+            if (plan.seniority_level) meta.push(plan.seniority_level);
+            jobMeta.textContent = meta.join(' • ');
+        }
+
+        function renderKeywordsSection() {
+            if (!plan) return;
+            
+            const covered = getCoveredKeywords();
+            renderKeywords(requiredKeywords, plan.required_keywords || [], covered);
+            renderKeywords(niceKeywords, plan.nice_to_have_keywords || [], covered);
+            renderKeywords(techKeywords, plan.technical_keywords || [], covered);
+        }
+
+        function renderBulletSlot(slot, containerId) {
+            const container = document.getElementById(containerId);
+            const slotDiv = document.createElement('div');
+            slotDiv.className = 'bullet-slot';
+            slotDiv.id = `slot-${slot.slot_index}`;
+            
+            if (approvedSlots.has(slot.slot_index)) {
+                slotDiv.classList.add('approved');
+            }
+            
+            const bullet = slot.current_candidate;
+            if (!bullet) {
+                slotDiv.innerHTML = `
+                    <div class="slot-header">
+                        <span class="slot-label">${slot.subsection} • Slot ${slot.slot_index + 1}</span>
+                    </div>
+                    <div class="bullet-text" style="color: var(--text-secondary);">
+                        No bullet available for this slot
+                    </div>
+                `;
+                container.appendChild(slotDiv);
+                return;
+            }
+            
+            const charClass = getCharCountClass(bullet.char_count);
+            const barWidth = Math.min((bullet.char_count / 120) * 100, 100);
+            
+            let keywordHits = '';
+            if (bullet.keyword_hits && bullet.keyword_hits.length > 0) {
+                keywordHits = `
+                    <div class="keyword-hits">
+                        ${bullet.keyword_hits.map(kw => `<span class="keyword-hit">${kw}</span>`).join('')}
+                    </div>
+                `;
+            }
+            
+            let warnings = '';
+            if (bullet.warnings && bullet.warnings.length > 0) {
+                warnings = `
+                    <div class="warnings">
+                        ${bullet.warnings.map(w => `<div class="warning-item">${w}</div>`).join('')}
+                    </div>
+                `;
+            }
+            
+            let rephraseHistory = '';
+            if (slot.rephrase_history && slot.rephrase_history.length > 0) {
+                rephraseHistory = `
+                    <div class="rephrase-history">
+                        <span class="rephrase-toggle" onclick="toggleHistory(${slot.slot_index})">
+                            ▸ ${slot.rephrase_history.length} previous version(s)
+                        </span>
+                        <div class="rephrase-list hidden" id="history-${slot.slot_index}">
+                            ${slot.rephrase_history.map((h, i) => `
+                                <div class="rephrase-item" onclick="revertToBullet(${slot.slot_index}, ${i})">
+                                    ${h.text.substring(0, 80)}${h.text.length > 80 ? '...' : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            slotDiv.innerHTML = `
+                <div class="slot-header">
+                    <span class="slot-label">${slot.subsection} • Slot ${slot.slot_index + 1}</span>
+                    <span class="slot-score">${(bullet.relevance_score * 100).toFixed(0)}% match</span>
+                </div>
+                <div class="bullet-text">${bullet.text}</div>
+                <div class="char-counter">
+                    <span class="char-count ${charClass}">${bullet.char_count}</span>
+                    <div class="char-bar">
+                        <div class="char-bar-fill ${charClass}" style="width: ${barWidth}%"></div>
+                    </div>
+                    <span class="char-count ${charClass}">/ 120</span>
+                </div>
+                ${keywordHits}
+                ${warnings}
+                <div class="slot-actions">
+                    <button class="btn btn-accept" onclick="acceptBullet(${slot.slot_index})" ${approvedSlots.has(slot.slot_index) ? 'disabled' : ''}>
+                        ${approvedSlots.has(slot.slot_index) ? '✓ Accepted' : 'Accept'}
+                    </button>
+                    <button class="btn" onclick="rephraseBullet(${slot.slot_index}, '${slot.section}', '${slot.subsection}')" id="rephrase-btn-${slot.slot_index}">
+                        Rephrase
+                    </button>
+                    <button class="btn" onclick="addToBank(${slot.slot_index})" title="Add to bullet bank">
+                        + Bank
+                    </button>
+                </div>
+                ${rephraseHistory}
+            `;
+            
+            container.appendChild(slotDiv);
+        }
+
+        function renderAllBullets() {
+            if (!plan) return;
+            
+            workExperienceSection.innerHTML = '<div class="subsection-header">Work Experience</div>';
+            technicalProjectsSection.innerHTML = '<div class="subsection-header">Technical Projects</div>';
+            
+            // Group by subsection
+            const workExp = {};
+            plan.work_experience_slots.forEach(slot => {
+                if (!workExp[slot.subsection]) workExp[slot.subsection] = [];
+                workExp[slot.subsection].push(slot);
+            });
+            
+            const techProj = {};
+            plan.technical_project_slots.forEach(slot => {
+                if (!techProj[slot.subsection]) techProj[slot.subsection] = [];
+                techProj[slot.subsection].push(slot);
+            });
+            
+            // Render work experience
+            for (const [subsection, slots] of Object.entries(workExp)) {
+                const subDiv = document.createElement('div');
+                subDiv.innerHTML = `<div class="preview-subsection">${subsection}</div>`;
+                workExperienceSection.appendChild(subDiv);
+                slots.forEach(slot => renderBulletSlot(slot, 'work-experience-section'));
+            }
+            
+            // Render technical projects
+            for (const [subsection, slots] of Object.entries(techProj)) {
+                const subDiv = document.createElement('div');
+                subDiv.innerHTML = `<div class="preview-subsection">${subsection}</div>`;
+                technicalProjectsSection.appendChild(subDiv);
+                slots.forEach(slot => renderBulletSlot(slot, 'technical-projects-section'));
+            }
+        }
+
+        function renderPreview() {
+            if (!plan) return;
+            
+            let html = '';
+            
+            // Work Experience
+            html += '<div class="preview-section"><div class="subsection-header">Work Experience</div>';
+            const workExp = {};
+            plan.work_experience_slots.forEach(slot => {
+                if (!workExp[slot.subsection]) workExp[slot.subsection] = [];
+                workExp[slot.subsection].push(slot);
+            });
+            
+            for (const [subsection, slots] of Object.entries(workExp)) {
+                html += `<div class="preview-subsection">${subsection}</div>`;
+                slots.forEach(slot => {
+                    if (slot.current_candidate) {
+                        const bullet = slot.current_candidate;
+                        const charClass = getCharCountClass(bullet.char_count);
+                        const status = approvedSlots.has(slot.slot_index) ? 'approved' : 'pending';
+                        html += `
+                            <div class="preview-bullet ${status}">
+                                <span class="preview-char ${charClass}">${bullet.char_count}</span>
+                                ${bullet.text}
+                            </div>
+                        `;
+                    }
+                });
+            }
+            html += '</div>';
+            
+            // Technical Projects
+            html += '<div class="preview-section"><div class="subsection-header">Technical Projects</div>';
+            const techProj = {};
+            plan.technical_project_slots.forEach(slot => {
+                if (!techProj[slot.subsection]) techProj[slot.subsection] = [];
+                techProj[slot.subsection].push(slot);
+            });
+            
+            for (const [subsection, slots] of Object.entries(techProj)) {
+                html += `<div class="preview-subsection">${subsection}</div>`;
+                slots.forEach(slot => {
+                    if (slot.current_candidate) {
+                        const bullet = slot.current_candidate;
+                        const charClass = getCharCountClass(bullet.char_count);
+                        const status = approvedSlots.has(slot.slot_index) ? 'approved' : 'pending';
+                        html += `
+                            <div class="preview-bullet ${status}">
+                                <span class="preview-char ${charClass}">${bullet.char_count}</span>
+                                ${bullet.text}
+                            </div>
+                        `;
+                    }
+                });
+            }
+            html += '</div>';
+            
+            // Uncovered keywords
+            if (plan.uncovered_keywords && plan.uncovered_keywords.length > 0) {
+                html += '<div class="preview-section"><div class="subsection-header" style="color: var(--amber);">Uncovered Keywords</div>';
+                html += '<div class="keyword-list">';
+                plan.uncovered_keywords.forEach(kw => {
+                    html += `<span class="keyword-tag" style="border-color: var(--amber); color: var(--amber);">${kw}</span>`;
+                });
+                html += '</div></div>';
+            }
+            
+            previewContent.innerHTML = html;
+        }
+
+        function updateGenerateButton() {
+            const totalSlots = plan ? 
+                plan.work_experience_slots.length + plan.technical_project_slots.length : 0;
+            const approved = approvedSlots.size;
+            
+            if (approved >= totalSlots && totalSlots > 0) {
+                generateBtn.disabled = false;
+                generateBtn.textContent = `Generate CV (${approved}/${totalSlots} approved)`;
+            } else {
+                generateBtn.disabled = true;
+                generateBtn.textContent = `Generate CV (${approved}/${totalSlots} approved)`;
+            }
+        }
+
+        // Actions
+        function acceptBullet(slotIndex) {
+            approvedSlots.add(slotIndex);
+            renderAllBullets();
+            renderPreview();
+            renderKeywordsSection();
+            updateGenerateButton();
+        }
+
+        async function rephraseBullet(slotIndex, section, subsection) {
+            const btn = document.getElementById(`rephrase-btn-${slotIndex}`);
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Rephrasing...';
+            
+            try {
+                const response = await fetch('/api/rephrase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job_id: currentJobId,
+                        slot_index: slotIndex,
+                        section: section,
+                        subsection: subsection
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showStatus(`Error: ${data.error}`, 'error');
+                    return;
+                }
+                
+                // Find and update the slot
+                const allSlots = [...plan.work_experience_slots, ...plan.technical_project_slots];
+                const slot = allSlots.find(s => s.slot_index === slotIndex);
+                
+                if (slot) {
+                    // Move current to history
+                    if (!slot.rephrase_history) slot.rephrase_history = [];
+                    if (slot.current_candidate) {
+                        slot.rephrase_history.push(slot.current_candidate);
+                    }
+                    // Set new candidate
+                    slot.current_candidate = data;
+                    
+                    // If was approved, unapprove
+                    approvedSlots.delete(slotIndex);
+                }
+                
+                renderAllBullets();
+                renderPreview();
+                renderKeywordsSection();
+                updateGenerateButton();
+                hideStatus();
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Rephrase';
+            }
+        }
+
+        function toggleHistory(slotIndex) {
+            const historyDiv = document.getElementById(`history-${slotIndex}`);
+            historyDiv.classList.toggle('hidden');
+        }
+
+        function revertToBullet(slotIndex, historyIndex) {
+            const allSlots = [...plan.work_experience_slots, ...plan.technical_project_slots];
+            const slot = allSlots.find(s => s.slot_index === slotIndex);
+            
+            if (slot && slot.rephrase_history && slot.rephrase_history[historyIndex]) {
+                // Swap current with history item
+                const temp = slot.current_candidate;
+                slot.current_candidate = slot.rephrase_history[historyIndex];
+                slot.rephrase_history[historyIndex] = temp;
+                
+                // Unapprove if approved
+                approvedSlots.delete(slotIndex);
+                
+                renderAllBullets();
+                renderPreview();
+                renderKeywordsSection();
+                updateGenerateButton();
+            }
+        }
+
+        async function addToBank(slotIndex) {
+            const allSlots = [...plan.work_experience_slots, ...plan.technical_project_slots];
+            const slot = allSlots.find(s => s.slot_index === slotIndex);
+            
+            if (!slot || !slot.current_candidate) return;
+            
+            const bullet = slot.current_candidate;
+            
+            try {
+                const response = await fetch('/api/bullets/add-to-bank', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: bullet.text,
+                        section: slot.section,
+                        subsection: slot.subsection,
+                        tags: bullet.tags || [],
+                        role_families: bullet.role_families || [plan.role_family]
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'added') {
+                    showStatus('Bullet added to bank!', 'success');
+                    setTimeout(hideStatus, 2000);
+                } else if (data.status === 'duplicate') {
+                    showStatus('Bullet already exists in bank', 'error');
+                    setTimeout(hideStatus, 2000);
+                }
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, 'error');
+            }
+        }
+
+        async function generateCV() {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner"></span>Generating...';
+            showStatus('Generating CV...', 'loading');
+            
+            try {
+                // Build approved bullets list
+                const allSlots = [...plan.work_experience_slots, ...plan.technical_project_slots];
+                const approvedBullets = allSlots
+                    .filter(slot => approvedSlots.has(slot.slot_index) && slot.current_candidate)
+                    .map(slot => ({
+                        slot_index: slot.slot_index,
+                        section: slot.section,
+                        subsection: slot.subsection,
+                        text: slot.current_candidate.text,
+                        source: slot.current_candidate.source,
+                        rephrase_generation: slot.current_candidate.rephrase_generation || 0
+                    }));
+                
+                const response = await fetch(`/api/approve/${currentJobId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: plan.user_id || 1,
+                        approved_bullets: approvedBullets,
+                        hidden_projects: plan.projects_to_hide || []
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showStatus(`Error: ${data.error}`, 'error');
+                    return;
+                }
+                
+                showStatus('CV generated successfully!', 'success');
+                
+                // Show download link
+                downloadLink.classList.remove('hidden');
+                downloadBtn.href = `/api/cv/${currentJobId}/download`;
+                downloadBtn.textContent = `Download ${data.filename}`;
+                
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, 'error');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate CV';
+                updateGenerateButton();
+            }
+        }
+
+        async function loadQueuedJobs() {
+            try {
+                const response = await fetch('/api/jobs/queued');
+                const data = await response.json();
+                
+                if (data.jobs) {
+                    queuedJobs.innerHTML = '';
+                    data.jobs.forEach(job => {
+                        const item = document.createElement('div');
+                        item.className = 'queue-item';
+                        if (job.id === currentJobId) {
+                            item.classList.add('active');
+                        }
+                        item.innerHTML = `
+                            <span class="queue-score">${job.fit_score ? job.fit_score.toFixed(1) : 'N/A'}</span>
+                            <div class="queue-job-info">
+                                <div class="queue-job-title">${job.title}</div>
+                                <div class="queue-job-company">${job.company}</div>
+                            </div>
+                        `;
+                        item.onclick = () => {
+                            window.location.href = `/build/${job.id}`;
+                        };
+                        queuedJobs.appendChild(item);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load queued jobs:', err);
+            }
+        }
+
+        async function loadPlan() {
+            if (!currentJobId) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            showStatus('Loading CV plan...', 'loading');
+            
+            try {
+                const response = await fetch(`/api/plan/${currentJobId}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showStatus(`Error: ${data.error}`, 'error');
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+                
+                plan = data;
+                approvedSlots.clear();
+                
+                renderJobInfo();
+                renderKeywordsSection();
+                renderAllBullets();
+                renderPreview();
+                updateGenerateButton();
+                hideStatus();
+                
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, 'error');
+                emptyState.classList.remove('hidden');
+            }
+        }
+
+        // Event Listeners
+        generateBtn.addEventListener('click', generateCV);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadQueuedJobs();
+            loadPlan();
+        });
+    </script>
+</body>
+</html>
