@@ -83,9 +83,9 @@ export function BulletSlot({
               <div className="flex items-center justify-between mt-1 pl-5">
                 <div className="flex items-center gap-1.5">
                   <SourceBadge source={current_candidate.source} />
-                  {current_candidate.keyword_hits.slice(0, 2).map((kw) => (
+                  {current_candidate.keyword_hits.slice(0, 2).map((kw, idx) => (
                     <Badge
-                      key={kw}
+                      key={`${slot_index}-accepted-${kw}-${idx}`}
                       variant="outline"
                       className="text-[9px] px-1 py-0 h-4 bg-accent-subtle text-accent-color border-accent-border"
                     >
@@ -125,9 +125,9 @@ export function BulletSlot({
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             <SourceBadge source={current_candidate.source} />
-            {current_candidate.keyword_hits.map((kw) => (
+            {current_candidate.keyword_hits.map((kw, idx) => (
               <Badge
-                key={kw}
+                key={`${slot_index}-pending-${kw}-${idx}`}
                 variant="outline"
                 className="text-[9px] px-1 py-0 h-4 bg-accent-subtle text-accent-color border-accent-border"
               >
