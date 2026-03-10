@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from agent.validators import BulletCandidate, BulletSlot, CVSelectionPlan
+from agent.validators import BulletCandidate, BulletSlot, BulletValidationError, CVSelectionPlan
 from agent.jd_parser import score_bullet_against_keywords
 
 
@@ -232,7 +232,8 @@ def build_selection_plan(
     conn,
     role_family: str,
     seniority_level: str,
-    user_id: int = 1
+    user_id: int = 1,
+    hide_projects: bool = True,
 ) -> CVSelectionPlan:
     """
     Build selection plan for CV generation.
@@ -255,8 +256,8 @@ def build_selection_plan(
     all_matched_keywords = []
     slot_index = 0
     
-    # Find projects to hide
-    projects_to_hide = find_projects_to_hide(keywords, template_map, bullet_bank, role_family)
+    # Find projects to hide (optional)
+    projects_to_hide = find_projects_to_hide(keywords, template_map, bullet_bank, role_family) if hide_projects else []
     
     # Process work experience section
     work_exp = template_map.get('work_experience', {})
@@ -278,13 +279,10 @@ def build_selection_plan(
         # Sort by score descending
         scored_bullets.sort(key=lambda x: x[1], reverse=True)
         
-        # Create slots for each bullet position in template
-        bullet_xpaths = subsection_data.get('bullet_xpaths', [])
-        for i in range(len(bullet_xpaths)):
-            if i < len(scored_bullets):
-                bullet, score, matched = scored_bullets[i]
-                all_matched_keywords.extend(matched)
-                
+        # Keep only bullets that pass candidate validation
+        valid_scored_bullets = []
+        for bullet, score, matched in scored_bullets:
+            try:
                 candidate = BulletCandidate(
                     text=bullet['text'],
                     source='master_bullets',
@@ -295,7 +293,17 @@ def build_selection_plan(
                     relevance_score=score,
                     keyword_hits=matched
                 )
-                
+                valid_scored_bullets.append((candidate, matched))
+            except (BulletValidationError, ValueError):
+                continue
+
+        # Create slots for each bullet position in template
+        bullet_xpaths = subsection_data.get('bullet_xpaths', [])
+        for i in range(len(bullet_xpaths)):
+            if i < len(valid_scored_bullets):
+                candidate, matched = valid_scored_bullets[i]
+                all_matched_keywords.extend(matched)
+
                 slot = BulletSlot(
                     slot_index=slot_index,
                     section='work_experience',
@@ -339,13 +347,10 @@ def build_selection_plan(
         # Sort by score descending
         scored_bullets.sort(key=lambda x: x[1], reverse=True)
         
-        # Create slots for each bullet position in template
-        bullet_xpaths = subsection_data.get('bullet_xpaths', [])
-        for i in range(len(bullet_xpaths)):
-            if i < len(scored_bullets):
-                bullet, score, matched = scored_bullets[i]
-                all_matched_keywords.extend(matched)
-                
+        # Keep only bullets that pass candidate validation
+        valid_scored_bullets = []
+        for bullet, score, matched in scored_bullets:
+            try:
                 candidate = BulletCandidate(
                     text=bullet['text'],
                     source='master_bullets',
@@ -356,7 +361,17 @@ def build_selection_plan(
                     relevance_score=score,
                     keyword_hits=matched
                 )
-                
+                valid_scored_bullets.append((candidate, matched))
+            except (BulletValidationError, ValueError):
+                continue
+
+        # Create slots for each bullet position in template
+        bullet_xpaths = subsection_data.get('bullet_xpaths', [])
+        for i in range(len(bullet_xpaths)):
+            if i < len(valid_scored_bullets):
+                candidate, matched = valid_scored_bullets[i]
+                all_matched_keywords.extend(matched)
+
                 slot = BulletSlot(
                     slot_index=slot_index,
                     section='technical_projects',

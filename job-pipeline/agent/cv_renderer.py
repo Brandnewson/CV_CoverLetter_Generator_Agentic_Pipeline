@@ -19,6 +19,25 @@ NAMESPACES = {
 }
 
 
+def normalise_bullet_text_for_render(text: str) -> str:
+    """Trim whitespace and add soft wrap points to very long tokens."""
+    cleaned = " ".join((text or "").split())
+    if not cleaned:
+        return ""
+
+    tokens = cleaned.split(" ")
+    wrapped_tokens = []
+    for token in tokens:
+        if len(token) <= 18:
+            wrapped_tokens.append(token)
+            continue
+
+        pieces = [token[i:i + 12] for i in range(0, len(token), 12)]
+        wrapped_tokens.append("\u200b".join(pieces))
+
+    return " ".join(wrapped_tokens)
+
+
 def unpack_docx(docx_path: Path, output_dir: Path) -> Path:
     """Unpack DOCX ZIP. Return path to word/document.xml."""
     if not docx_path.exists():
@@ -182,7 +201,7 @@ def render_cv(
             section = bullet['section']
             subsection = bullet['subsection']
             slot_index = bullet['slot_index']
-            new_text = bullet['text']
+            new_text = normalise_bullet_text_for_render(bullet['text'])
             
             # Get bullet xpaths for this subsection
             if section in template_map and subsection in template_map[section]:

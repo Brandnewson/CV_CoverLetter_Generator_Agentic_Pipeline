@@ -1,6 +1,6 @@
 {
   "work_experience": {
-    "Jaguar TCS Racing": {
+    "Jaguar TCS Racing           Aug. 2024 – Aug. 2025": {
       "header_xpaths": [
         "/w:document/w:body/w:p[5]",
         "/w:document/w:body/w:p[6]",
@@ -22,7 +22,7 @@
         "/w:document/w:body/w:p[20]"
       ]
     },
-    "Republic of Singapore Navy": {
+    "Republic of Singapore Navy          Nov. 2020 – Jul. 2022": {
       "header_xpaths": [
         "/w:document/w:body/w:p[22]",
         "/w:document/w:body/w:p[23]"
@@ -35,7 +35,7 @@
         "/w:document/w:body/w:p[28]"
       ]
     },
-    "Travelindr": {
+    "Travelindr           Oct. 2019 – Mar. 2020": {
       "header_xpaths": [
         "/w:document/w:body/w:p[30]",
         "/w:document/w:body/w:p[31]"
@@ -48,7 +48,7 @@
     }
   },
   "technical_projects": {
-    "Formula Student Lap Time Simulator": {
+    "Formula Student Lap Time Simulator |Python, Vehicle Dynamics, Simulation Modelling": {
       "header_xpaths": [
         "/w:document/w:body/w:p[48]"
       ],
@@ -58,7 +58,7 @@
         "/w:document/w:body/w:p[51]"
       ]
     },
-    "Radiator Thermal Management Simulator": {
+    "Radiator Thermal Management Simulator | Matlab, MotecI2": {
       "header_xpaths": [
         "/w:document/w:body/w:p[53]"
       ],
@@ -66,7 +66,7 @@
         "/w:document/w:body/w:p[54]"
       ]
     },
-    "2D CFD Formula Student Radiator Optimisation Simulator": {
+    "2D CFD Formula Student Radiator Optimisation Simulator |Rust, Numerical Methods": {
       "header_xpaths": [
         "/w:document/w:body/w:p[56]"
       ],
@@ -75,7 +75,7 @@
         "/w:document/w:body/w:p[58]"
       ]
     },
-    "Formula Student ICE Data Acquisition System": {
+    "Formula Student ICE Data Acquisition System|C++, Git, Arduino": {
       "header_xpaths": [
         "/w:document/w:body/w:p[60]"
       ],
@@ -84,7 +84,7 @@
         "/w:document/w:body/w:p[62]"
       ]
     },
-    "Formula Student EV Battery Management System Emulator": {
+    "Formula Student EV Battery Management System Emulator|C++, CAN Bus protocol": {
       "header_xpaths": [
         "/w:document/w:body/w:p[64]"
       ],

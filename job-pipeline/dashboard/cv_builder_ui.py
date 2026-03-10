@@ -157,7 +157,8 @@ def build_plan_for_job(conn, job: dict, user_id: int = 1):
         conn=conn,
         role_family=role_family,
         seniority_level=seniority_level,
-        user_id=user_id
+        user_id=user_id,
+        hide_projects=False,
     )
     
     return plan, keywords

@@ -8,7 +8,7 @@
     [tags: api, telemetry, python, vbs, motorsport, software, rest-api]
     [role_family: motorsport, general-swe]
 
-- Developed full-stack ReactJS data visualisation apps for time-critical race data.
+-	Develop full-stack ReactJS data visualisation apps focused on UX for engineers to read time-critical race data.
     [tags: frontend, react, typescript, ux, motorsport, software]
     [role_family: motorsport, general-swe]
 
@@ -94,6 +94,18 @@
 
 
 
+
+- Validated battery thermal models against track and simulator datasets to improve race temperature forecasting accuracy.
+    [tags: general]
+    [role_family: ai-startup]
+
+- Built a Python library with ATLAS API integration for optimised data serialisation and retrieval workflows.
+    [tags: general]
+    [role_family: ai-startup]
+
+- Validated battery thermal models against track and simulator datasets for accurate race temperature forecasting.
+    [tags: general]
+    [role_family: ai-startup]
 ### Republic of Singapore Navy
 
 - Trained on Singapore Navy's largest marine vessel, on maintenance and wartime awareness of ship systems.
@@ -150,7 +162,7 @@
     [tags: simulation, vehicle-dynamics, motorsport, modelling]
     [role_family: motorsport]
 
-### Formula student thermal management simulator
+### Radiator Thermal Management Simulator
 - Constructed radiator size optimiser to correlate real-world and simulator thermal impact on the coolant system.
     [tags: simulation, optimization, motorsport, modelling]
     [role_family: motorsport]
@@ -169,7 +181,11 @@
     [tags: telemetry, embedded, hardware, motorsport, software]
     [role_family: motorsport]
 
-### Formula Student EV Battery Management System
+- Honed proficiency in collaborative software engineering practices using Git, branches, and code reviews.
+    [tags: git, collaboration, software, motorsport, general-swe]
+    [role_family: motorsport, general-swe]
+
+### Formula Student EV Battery Management System Emulator
 - Architected an expansion module using the CAN bus protocol for robust and efficient data transfer.
     [tags: embedded, hardware, electronics, motorsport]
     [role_family: motorsport]

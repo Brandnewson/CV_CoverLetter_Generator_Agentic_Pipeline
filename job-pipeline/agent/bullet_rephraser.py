@@ -19,7 +19,7 @@ Rephrase the provided bullet point. Rules:
 - Include one technology or keyword from the job description that is not already in
   the 'already used keywords' list
 - Do not duplicate any keyword from the 'already used keywords' list
-- Maximum 120 characters including spaces (aim for under 110)
+- Must be between 90 and 112 characters including spaces — target 100–110 to maximise keyword density without overflowing the CV line; bullets under 90 characters waste space
 - Do not invent metrics, tools, or experiences not in the original bullet
 - Do not reproduce any previous version exactly
 

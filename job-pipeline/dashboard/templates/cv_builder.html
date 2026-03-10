@@ -239,7 +239,9 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             margin-bottom: 8px;
-            word-wrap: break-word;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         /* Character Counter */
@@ -385,6 +387,9 @@
             background-color: var(--bg-tertiary);
             border-radius: 4px;
             border-left: 2px solid var(--border-color);
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .preview-bullet.approved {
@@ -628,9 +633,10 @@
 
         // Helpers
         function getCharCountClass(count) {
-            if (count <= 90) return 'green';
-            if (count <= 110) return 'amber';
-            return 'red';
+            if (count < 75) return 'red';      // too short
+            if (count < 90) return 'amber';    // below target
+            if (count <= 112) return 'green';  // optimal 90–112
+            return 'amber';                    // 113–120: borderline long
         }
 
         function showStatus(message, type) {
@@ -894,16 +900,21 @@
         }
 
         function updateGenerateButton() {
-            const totalSlots = plan ? 
-                plan.work_experience_slots.length + plan.technical_project_slots.length : 0;
-            const approved = approvedSlots.size;
+            const allSlots = plan ? [...plan.work_experience_slots, ...plan.technical_project_slots] : [];
+            const approvableSlotIndices = new Set(
+                allSlots
+                    .filter(slot => slot.current_candidate)
+                    .map(slot => slot.slot_index)
+            );
+            const totalApprovable = approvableSlotIndices.size;
+            const approved = [...approvedSlots].filter(slotIndex => approvableSlotIndices.has(slotIndex)).length;
             
-            if (approved >= totalSlots && totalSlots > 0) {
+            if (approved >= totalApprovable && totalApprovable > 0) {
                 generateBtn.disabled = false;
-                generateBtn.textContent = `Generate CV (${approved}/${totalSlots} approved)`;
+                generateBtn.textContent = `Generate CV (${approved}/${totalApprovable} approved)`;
             } else {
                 generateBtn.disabled = true;
-                generateBtn.textContent = `Generate CV (${approved}/${totalSlots} approved)`;
+                generateBtn.textContent = `Generate CV (${approved}/${totalApprovable} approved)`;
             }
         }
 
