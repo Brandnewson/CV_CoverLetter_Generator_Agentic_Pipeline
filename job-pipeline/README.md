@@ -83,6 +83,31 @@ For local testing, the same `job_id` can be generated repeatedly.
 - Controlled by `KEEP_JOB_QUEUED_AFTER_RENDER` (default `true`).
 - When `true`, approve/render keeps status as `queued` instead of moving to `cv_generated`.
 
+## Tests
+
+```powershell
+cd job-pipeline
+uv run pytest tests/ -v
+```
+
+Test files map one-to-one to their modules:
+
+| File | Tests |
+|------|-------|
+| `test_schema.py` | DB schema columns/tables |
+| `test_validators.py` | `agent/validators.py` — bullet/slot types |
+| `test_jd_parser.py` | `agent/jd_parser.py` — keyword extraction |
+| `test_template_extractor.py` | `agent/template_extractor.py` |
+| `test_bullet_selector.py` | `agent/bullet_selector.py` |
+| `test_story_drafter.py` | `agent/story_drafter.py` |
+| `test_bullet_rephraser.py` | `agent/bullet_rephraser.py` |
+| `test_cv_renderer.py` | `agent/cv_renderer.py` |
+| `test_style_updater.py` | `agent/style_updater.py` |
+| `test_web_ui.py` | `dashboard/cv_builder_ui.py` Flask routes |
+| `test_search.py` | `discovery/run_search.py` |
+| `test_scorer.py` | `discovery/scorer.py` |
+| `test_dedup.py` | `discovery/dedup.py` |
+
 ## Common failure points
 
 - Model 404 from Anthropic: `CLAUDE_MODEL` is not available to your key.

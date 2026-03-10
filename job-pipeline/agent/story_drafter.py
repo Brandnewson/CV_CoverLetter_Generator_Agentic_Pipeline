@@ -339,5 +339,3 @@ def get_story_excerpt(subsection: str, stories_path: Path, max_chars: int = 1000
         return story
     
     return story[:max_chars] + "..."
-    # Placeholder - will be implemented in Phase 7
-    raise NotImplementedError("Bullet approval not yet implemented")

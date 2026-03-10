@@ -2,24 +2,23 @@
 
 ## Commands
 
-- "generate cv for job <id>" → run sequence below
-- "check job <id>" → uv run python agent/generate_cv.py --job-id <id> --check
-- "show queued jobs" → uv run python dashboard/review.py
-- "run tests" → uv run pytest tests/ -v
-- "how much have I spent?" → uv run python agent/cost_report.py
+- "show queued jobs" → `uv run python dashboard/review.py`
+- "start the builder UI" → `uv run python dashboard/cv_builder_ui.py` then open http://localhost:5051
+- "run tests" → `uv run pytest tests/ -v`
+- "how much have I spent?" → `uv run python agent/cost_report.py`
 - "add bullets from job <id>" → use /api/bullets/add-to-bank in the UI
+- "run diagnostics" → `uv run python scripts/debug_bullet_mapping.py --job-id <id>`
 
 ## Generation sequence
 
-1. `uv run python agent/generate_cv.py --job-id <id> --check`
-   Fix any errors before proceeding.
+1. Ensure job is in 'queued' status (use `dashboard/review.py` or set directly in DB).
 
-2. `uv run python agent/generate_cv.py --job-id <id>`
-   Tell user to open http://localhost:5051/build/<id>
+2. Start the builder: `uv run python dashboard/cv_builder_ui.py`
+   Open http://localhost:5051/build/<id>
 
-3. Wait for user to confirm all slots accepted and CV downloaded.
+3. Review each slot. Accept or rephrase bullets until all slots are approved.
 
-4. style_updater.py runs automatically after approve. Confirm CLAUDE.md was updated.
+4. Click "Generate CV" — the DOCX is saved to `output/`.
 
 5. Tell user the DOCX path and remind them to review in Word before applying.
 

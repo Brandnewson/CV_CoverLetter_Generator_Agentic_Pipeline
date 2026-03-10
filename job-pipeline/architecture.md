@@ -114,8 +114,28 @@ Use:
 
 This script validates assets, DB, queued jobs, plan generation, and optional render/download.
 
+## Tests
+
+All test files live in `tests/` and map directly to their module:
+
+| Test file | Module under test |
+|-----------|-------------------|
+| `test_schema.py` | DB schema |
+| `test_validators.py` | `agent/validators.py` |
+| `test_jd_parser.py` | `agent/jd_parser.py` |
+| `test_template_extractor.py` | `agent/template_extractor.py` |
+| `test_bullet_selector.py` | `agent/bullet_selector.py` |
+| `test_story_drafter.py` | `agent/story_drafter.py` |
+| `test_bullet_rephraser.py` | `agent/bullet_rephraser.py` |
+| `test_cv_renderer.py` | `agent/cv_renderer.py` |
+| `test_style_updater.py` | `agent/style_updater.py` |
+| `test_web_ui.py` | Flask routes |
+| `test_search.py` | `discovery/run_search.py` |
+| `test_scorer.py` | `discovery/scorer.py` |
+| `test_dedup.py` | `discovery/dedup.py` |
+
 ## Known sharp edges
 
-- If `template_map.json` has zero bullet slots, UI appears empty even if backend is healthy.
-- If `CLAUDE_MODEL` is not valid for your Anthropic key, `/api/plan` or `/api/rephrase` fails.
-- `agent/generate_cv.py` is not the runtime path; web API is the active path.
+- If `template_map.json` has zero bullet slots, the builder UI appears empty even when the backend is healthy.
+- If `CLAUDE_MODEL` is not valid for your Anthropic key, `/api/plan` or `/api/rephrase` returns 500.
+- The web API (`dashboard/cv_builder_ui.py`) is the only active CV generation path.
