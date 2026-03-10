@@ -327,3 +327,6 @@
 {"timestamp": "2026-03-10T17:00:42.809654+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 269, "output_tokens": 124}
 {"timestamp": "2026-03-10T17:02:36.125623+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 269, "output_tokens": 142}
 {"timestamp": "2026-03-10T17:02:36.311534+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 269, "output_tokens": 131}
+{"timestamp": "2026-03-10T20:43:25.879646+00:00", "user_id": 1, "operation": "rephrase_bullet", "model": "claude-haiku-4-5", "input_tokens": 372, "output_tokens": 27}
+{"timestamp": "2026-03-10T20:43:27.568701+00:00", "user_id": 1, "operation": "rephrase_bullet", "model": "claude-haiku-4-5", "input_tokens": 372, "output_tokens": 26}
+{"timestamp": "2026-03-10T20:43:29.265259+00:00", "user_id": 1, "operation": "rephrase_bullet", "model": "claude-haiku-4-5", "input_tokens": 372, "output_tokens": 28}
