@@ -29,6 +29,17 @@ ROLE_FAMILIES = {
     "general-swe": []  # fallback
 }
 
+
+KEYWORD_ALIAS_MAP = {
+    "ci/cd": ["ci cd", "continuous integration", "continuous delivery", "continuous deployment"],
+    "node.js": ["nodejs", "node js", "node"],
+    "c#": ["csharp", "c sharp"],
+    "c++": ["cpp", "c plus plus"],
+    "llms": ["llm", "large language model", "large language models", "generative ai"],
+    "typescript": ["ts"],
+    "javascript": ["js"],
+}
+
 # Order matters: check more specific levels first
 SENIORITY_CHECK_ORDER = ["senior", "junior", "junior-mid", "mid"]
 
@@ -222,16 +233,39 @@ def score_bullet_against_keywords(bullet: str, keywords: dict) -> tuple[float, l
         "domain_keywords": 0.3,
         "seniority_signals": 0.1
     }
+
+    def normalise_keyword(keyword: str) -> str:
+        return re.sub(r"\s+", " ", (keyword or "").strip().lower())
+
+    def is_word_phrase(variant: str) -> bool:
+        return bool(re.fullmatch(r"[a-z0-9 ]+", variant))
+
+    def build_variants(keyword: str) -> list[str]:
+        canonical = normalise_keyword(keyword)
+        aliases = KEYWORD_ALIAS_MAP.get(canonical, [])
+        variants = [canonical] + [normalise_keyword(alias) for alias in aliases]
+        return list(dict.fromkeys([variant for variant in variants if variant]))
+
+    def keyword_in_bullet(keyword: str) -> bool:
+        for variant in build_variants(keyword):
+            if is_word_phrase(variant):
+                pattern = r"\b" + r"\s+".join(re.escape(token) for token in variant.split(" ")) + r"\b"
+                if re.search(pattern, bullet_lower):
+                    return True
+            elif variant in bullet_lower:
+                return True
+        return False
     
     for category, weight in weights.items():
         kw_list = keywords.get(category, [])
         for kw in kw_list:
             if not kw:
                 continue
-            kw_lower = kw.lower()
-            if kw_lower in bullet_lower:
+            if keyword_in_bullet(str(kw)):
                 weighted_score += weight
-                matched.append(kw)
+                matched.append(normalise_keyword(str(kw)))
+
+    matched = list(dict.fromkeys(matched))
     
     # Normalise to 0.0-1.0 using a fixed realistic max (5.0 = excellent multi-category match)
     # This preserves relative weight differences between keyword types

@@ -269,6 +269,38 @@ class TestScoreBulletAgainstKeywords:
         )
         assert score <= 1.0
 
+    def test_alias_matching_ci_cd(self):
+        """Alias matching should map continuous integration terms to ci/cd keyword."""
+        keywords = {
+            "required_keywords": ["ci/cd"],
+            "nice_to_have_keywords": [],
+            "technical_skills": [],
+            "soft_skills": [],
+            "domain_keywords": [],
+            "seniority_signals": []
+        }
+        score, matched = score_bullet_against_keywords(
+            "Implemented continuous integration workflows and release automation", keywords
+        )
+        assert score > 0
+        assert "ci/cd" in matched
+
+    def test_alias_matching_nodejs(self):
+        """Alias matching should map nodejs token to node.js keyword."""
+        keywords = {
+            "required_keywords": ["node.js"],
+            "nice_to_have_keywords": [],
+            "technical_skills": [],
+            "soft_skills": [],
+            "domain_keywords": [],
+            "seniority_signals": []
+        }
+        score, matched = score_bullet_against_keywords(
+            "Built backend services with nodejs and TypeScript", keywords
+        )
+        assert score > 0
+        assert "node.js" in matched
+
 
 class TestExtractKeywords:
     """Test keyword extraction with mocked API."""

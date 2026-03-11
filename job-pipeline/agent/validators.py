@@ -201,6 +201,7 @@ class CVSelectionPlan(BaseModel):
     projects_to_hide: List[str]
     keyword_coverage: dict          # {keyword: slot_indices_that_cover_it}
     uncovered_keywords: List[str]
+    keyword_bucket_coverage: dict = {}  # {bucket: [{keyword, status, covering_slots}]}
 
     @field_validator('role_family')
     @classmethod

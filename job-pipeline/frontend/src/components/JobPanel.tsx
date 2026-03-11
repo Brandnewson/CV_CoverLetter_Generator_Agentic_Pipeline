@@ -138,6 +138,15 @@ export function JobPanel({
   }, [draftSyncVersion])
 
   const allKeywords = [...technologies, ...skills, ...abilities]
+  const bucketCoverage = plan?.keyword_bucket_coverage
+
+  const getKeywordVariant = (
+    bucket: 'technologies' | 'skills' | 'abilities',
+    keyword: string
+  ) => {
+    const entry = bucketCoverage?.[bucket]?.find((item) => item.keyword.toLowerCase() === keyword.toLowerCase())
+    return entry?.status === 'hit' ? 'hit' : 'uncovered'
+  }
 
   const companyDescriptionText = normalizeCompanyDescriptionText(draft.company_description_raw)
   const jobDescriptionText = normalizeJobDescriptionMarkdown(draft.job_description_raw)
@@ -268,7 +277,11 @@ export function JobPanel({
             />
             <div className="flex flex-wrap gap-1">
               {technologies.map((kw) => (
-                <KeywordTag key={`tech-${kw}`} keyword={kw} variant="required" />
+                <KeywordTag
+                  key={`tech-${kw}`}
+                  keyword={kw}
+                  variant={getKeywordVariant('technologies', kw)}
+                />
               ))}
             </div>
           </div>
@@ -288,7 +301,11 @@ export function JobPanel({
             />
             <div className="flex flex-wrap gap-1">
               {skills.map((kw) => (
-                <KeywordTag key={`skill-${kw}`} keyword={kw} variant="nice-to-have" />
+                <KeywordTag
+                  key={`skill-${kw}`}
+                  keyword={kw}
+                  variant={getKeywordVariant('skills', kw)}
+                />
               ))}
             </div>
           </div>
@@ -308,7 +325,11 @@ export function JobPanel({
             />
             <div className="flex flex-wrap gap-1">
               {abilities.map((kw) => (
-                <KeywordTag key={`ability-${kw}`} keyword={kw} variant="required" />
+                <KeywordTag
+                  key={`ability-${kw}`}
+                  keyword={kw}
+                  variant={getKeywordVariant('abilities', kw)}
+                />
               ))}
             </div>
           </div>

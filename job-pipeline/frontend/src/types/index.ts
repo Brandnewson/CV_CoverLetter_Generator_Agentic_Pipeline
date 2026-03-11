@@ -44,8 +44,21 @@ export interface CVSelectionPlan {
   projects_to_hide: string[]
   keyword_coverage: Record<string, number[]>
   uncovered_keywords: string[]
+  keyword_bucket_coverage: KeywordBucketCoverage
   // Joined from API response
   job?: Job
+}
+
+export interface KeywordCoverageItem {
+  keyword: string
+  status: 'hit' | 'uncovered'
+  covering_slots: number[]
+}
+
+export interface KeywordBucketCoverage {
+  technologies: KeywordCoverageItem[]
+  skills: KeywordCoverageItem[]
+  abilities: KeywordCoverageItem[]
 }
 
 export interface Job {

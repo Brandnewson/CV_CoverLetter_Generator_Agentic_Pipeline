@@ -330,3 +330,8 @@
 {"timestamp": "2026-03-10T20:43:25.879646+00:00", "user_id": 1, "operation": "rephrase_bullet", "model": "claude-haiku-4-5", "input_tokens": 372, "output_tokens": 27}
 {"timestamp": "2026-03-10T20:43:27.568701+00:00", "user_id": 1, "operation": "rephrase_bullet", "model": "claude-haiku-4-5", "input_tokens": 372, "output_tokens": 26}
 {"timestamp": "2026-03-10T20:43:29.265259+00:00", "user_id": 1, "operation": "rephrase_bullet", "model": "claude-haiku-4-5", "input_tokens": 372, "output_tokens": 28}
+{"timestamp": "2026-03-11T12:00:24.790301+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 100, "output_tokens": 50}
+{"timestamp": "2026-03-11T12:00:24.792443+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 100, "output_tokens": 50}
+{"timestamp": "2026-03-11T12:00:24.794734+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 100, "output_tokens": 50}
+{"timestamp": "2026-03-11T12:00:24.796818+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 100, "output_tokens": 50}
+{"timestamp": "2026-03-11T12:00:24.798816+00:00", "user_id": 1, "operation": "extract_keywords", "model": "claude-haiku-4-5", "input_tokens": 100, "output_tokens": 50}

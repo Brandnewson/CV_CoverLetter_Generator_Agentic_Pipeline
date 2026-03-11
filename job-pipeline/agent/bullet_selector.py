@@ -394,9 +394,29 @@ def build_selection_plan(
     
     # Calculate keyword coverage
     keyword_coverage = {}
+    all_slots = work_experience_slots + technical_project_slots
+
+    def keyword_covered_slot_indices(keyword: str) -> list[int]:
+        slot_indices: list[int] = []
+        match_keywords = {
+            "required_keywords": [keyword],
+            "nice_to_have_keywords": [],
+            "technical_skills": [],
+            "soft_skills": [],
+            "domain_keywords": [],
+            "seniority_signals": [],
+        }
+        for slot in all_slots:
+            if not slot.current_candidate:
+                continue
+            score, _ = score_bullet_against_keywords(slot.current_candidate.text, match_keywords)
+            if score > 0:
+                slot_indices.append(slot.slot_index)
+        return slot_indices
+
     for kw in set(all_matched_keywords):
         covering_slots = []
-        for slot in work_experience_slots + technical_project_slots:
+        for slot in all_slots:
             if slot.current_candidate and kw in slot.current_candidate.keyword_hits:
                 covering_slots.append(slot.slot_index)
         keyword_coverage[kw] = covering_slots
@@ -405,6 +425,21 @@ def build_selection_plan(
     required = set(keywords.get('required_keywords', []))
     covered = set(all_matched_keywords)
     uncovered = list(required - covered)
+
+    keyword_bucket_coverage = {
+        "technologies": [],
+        "skills": [],
+        "abilities": [],
+    }
+    for bucket in ["technologies", "skills", "abilities"]:
+        bucket_keywords = list(dict.fromkeys([str(k).strip().lower() for k in keywords.get(bucket, []) if str(k).strip()]))
+        for keyword in bucket_keywords:
+            covering_slots = keyword_covered_slot_indices(keyword)
+            keyword_bucket_coverage[bucket].append({
+                "keyword": keyword,
+                "status": "hit" if covering_slots else "uncovered",
+                "covering_slots": covering_slots,
+            })
     
     return CVSelectionPlan(
         job_id=job.get('id', 0),
@@ -420,7 +455,8 @@ def build_selection_plan(
         technical_project_slots=technical_project_slots,
         projects_to_hide=projects_to_hide,
         keyword_coverage=keyword_coverage,
-        uncovered_keywords=uncovered
+        uncovered_keywords=uncovered,
+        keyword_bucket_coverage=keyword_bucket_coverage,
     )
 
 

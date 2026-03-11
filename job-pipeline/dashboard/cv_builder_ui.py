@@ -215,6 +215,9 @@ def build_plan_for_job(conn, job: dict, user_id: int = 1):
         "soft_skills": skills,
         "domain_keywords": abilities,
         "seniority_signals": [],
+        "technologies": technologies,
+        "skills": skills,
+        "abilities": abilities,
     }
 
     # Classify the job

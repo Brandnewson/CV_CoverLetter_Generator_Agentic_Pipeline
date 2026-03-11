@@ -452,6 +452,47 @@ class TestBuildSelectionPlan:
         
         # keyword_coverage should be a dict
         assert isinstance(plan.keyword_coverage, dict)
+        assert isinstance(plan.keyword_bucket_coverage, dict)
+        assert "technologies" in plan.keyword_bucket_coverage
+        assert "skills" in plan.keyword_bucket_coverage
+        assert "abilities" in plan.keyword_bucket_coverage
+
+    def test_bucket_keyword_coverage_status(
+        self, sample_bullet_bank_md, sample_template_map, sample_keywords, mock_conn, sample_job
+    ):
+        """Bucket coverage should include keyword status and slot links."""
+        bullet_bank = load_bullet_bank(sample_bullet_bank_md)
+
+        keywords = {
+            'required_keywords': ['python'],
+            'nice_to_have_keywords': ['communication'],
+            'technical_skills': ['python'],
+            'soft_skills': ['communication'],
+            'domain_keywords': [],
+            'seniority_signals': [],
+            'technologies': ['python'],
+            'skills': ['communication'],
+            'abilities': ['ownership'],
+        }
+
+        plan = build_selection_plan(
+            job=sample_job,
+            keywords=keywords,
+            bullet_bank=bullet_bank,
+            template_map=sample_template_map,
+            conn=mock_conn,
+            role_family='motorsport',
+            seniority_level='mid',
+            user_id=1,
+        )
+
+        technologies = plan.keyword_bucket_coverage.get('technologies', [])
+        assert any(item['keyword'] == 'python' for item in technologies)
+
+        abilities = plan.keyword_bucket_coverage.get('abilities', [])
+        ownership = next((item for item in abilities if item['keyword'] == 'ownership'), None)
+        assert ownership is not None
+        assert ownership['status'] in {'hit', 'uncovered'}
     
     def test_uncovered_keywords_identified(
         self, sample_bullet_bank_md, sample_template_map, mock_conn, sample_job
