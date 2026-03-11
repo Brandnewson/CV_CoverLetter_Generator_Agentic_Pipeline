@@ -137,3 +137,55 @@ export function useRestoreBullet(jobId: number) {
     },
   })
 }
+
+export function useReplaceSlotCandidate(jobId: number) {
+  const queryClient = useQueryClient()
+
+  return useMutation<
+    void,
+    Error,
+    { slotIndex: number; text: string; source: BulletCandidate['source']; keywords: string[] }
+  >({
+    mutationFn: async () => {},
+    onMutate: async ({ slotIndex, text, source, keywords }) => {
+      queryClient.setQueryData<CVSelectionPlan>(['plan', jobId], (old) => {
+        if (!old) return old
+
+        const makeCandidate = (slot: (typeof old.work_experience_slots)[number]): BulletCandidate => ({
+          text,
+          source,
+          section: slot.section,
+          subsection: slot.subsection,
+          tags: [],
+          role_families: [],
+          relevance_score: 0.6,
+          char_count: text.length,
+          over_soft_limit: text.length > 110,
+          keyword_hits: keywords,
+          rephrase_generation: 0,
+          warnings: text.length > 110 ? [`Over 110 characters (${text.length})`] : [],
+        })
+
+        const updateSlots = (slots: typeof old.work_experience_slots) =>
+          slots.map((slot) => {
+            if (slot.slot_index !== slotIndex) return slot
+            const nextCandidate = makeCandidate(slot)
+            return {
+              ...slot,
+              rephrase_history: slot.current_candidate
+                ? [...slot.rephrase_history, slot.current_candidate]
+                : slot.rephrase_history,
+              current_candidate: nextCandidate,
+              is_approved: false,
+            }
+          })
+
+        return {
+          ...old,
+          work_experience_slots: updateSlots(old.work_experience_slots),
+          technical_project_slots: updateSlots(old.technical_project_slots),
+        }
+      })
+    },
+  })
+}

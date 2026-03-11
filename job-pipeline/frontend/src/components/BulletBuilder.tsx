@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BulletSlot } from '@/components/BulletSlot'
-import type { CVSelectionPlan, Section, BulletSlot as BulletSlotType, KeywordCoverageItem } from '@/types'
+import type {
+  CVSelectionPlan,
+  Section,
+  BulletSlot as BulletSlotType,
+  DragBulletPayload,
+  KeywordCoverageItem,
+} from '@/types'
 
 interface BulletBuilderProps {
   plan: CVSelectionPlan | undefined
@@ -15,6 +21,7 @@ interface BulletBuilderProps {
   isRephrasing: boolean
   rephrasingSlotIndex: number | null
   canRephrase: boolean
+  onDropSuggestion: (slotIndex: number, payload: DragBulletPayload) => void
 }
 
 interface GroupedSlots {
@@ -84,6 +91,7 @@ export function BulletBuilder({
   isRephrasing,
   rephrasingSlotIndex,
   canRephrase,
+  onDropSuggestion,
 }: BulletBuilderProps) {
   const [hiddenProjects, setHiddenProjects] = useState<Set<string>>(new Set())
 
@@ -218,6 +226,7 @@ export function BulletBuilder({
                             isRephrasing && rephrasingSlotIndex === slot.slot_index
                           }
                           canRephrase={canRephrase}
+                          onDropSuggestion={onDropSuggestion}
                         />
                       ))}
                     </div>

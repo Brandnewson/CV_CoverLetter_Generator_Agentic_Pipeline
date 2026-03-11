@@ -165,6 +165,7 @@ class TestFlaskApp:
                 assert "/build/<int:job_id>" in routes
                 assert "/api/plan/<int:job_id>" in routes
                 assert "/api/rephrase" in routes
+                assert "/api/suggestions/<int:job_id>" in routes
                 assert "/api/jobs/<int:job_id>/enrichment" in routes
                 assert "/api/approve/<int:job_id>" in routes
                 assert "/api/cv/<int:job_id>/download" in routes
@@ -278,6 +279,48 @@ class TestAPIEndpoints:
             assert "text" in data
             assert "source" in data
             assert data["source"] == "rephrasing"
+
+    def test_get_suggestions_returns_payload(self, client, sample_plan, sample_job):
+        """GET /api/suggestions/<job_id> returns grouped suggestions JSON."""
+        from dashboard import cv_builder_ui
+
+        cv_builder_ui.active_plans[1] = sample_plan
+        cv_builder_ui.active_keywords[1] = {
+            "required_keywords": ["python"],
+            "nice_to_have_keywords": [],
+            "technical_skills": ["python"],
+        }
+
+        with patch("dashboard.cv_builder_ui.get_db_connection") as mock_conn:
+            with patch("dashboard.cv_builder_ui.get_job_by_id") as mock_get_job:
+                with patch("dashboard.cv_builder_ui.generate_suggestions_for_section") as mock_generate:
+                    mock_get_job.return_value = sample_job
+                    mock_conn.return_value.close = MagicMock()
+                    mock_generate.side_effect = [
+                        [{
+                            "subsection": "Test Company",
+                            "existing_slot_count": 1,
+                            "target_suggestion_count": 3,
+                            "suggestions": [{
+                                "text": "Built test automation tooling in Python.",
+                                "keywords_targeted": ["python"],
+                                "char_count": 40,
+                                "over_soft_limit": False,
+                                "over_hard_limit": False,
+                                "warnings": [],
+                            }],
+                        }],
+                        [],
+                    ]
+
+                    response = client.get("/api/suggestions/1")
+
+                    assert response.status_code == 200
+                    data = response.get_json()
+                    assert data["job_id"] == 1
+                    assert "sections" in data
+                    assert "work_experience" in data["sections"]
+                    assert "technical_projects" in data["sections"]
     
     def test_rephrase_without_plan_returns_error(self, client):
         """POST /api/rephrase returns error when plan not loaded."""

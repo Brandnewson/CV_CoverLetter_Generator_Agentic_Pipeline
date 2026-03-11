@@ -137,3 +137,35 @@ export interface SaveEnrichmentResponse {
   status: 'saved'
   job: Job
 }
+
+export interface SuggestedBullet {
+  text: string
+  keywords_targeted: string[]
+  char_count: number
+  over_soft_limit: boolean
+  over_hard_limit: boolean
+  warnings: string[]
+}
+
+export interface SuggestedSubsection {
+  subsection: string
+  existing_slot_count: number
+  target_suggestion_count: number
+  suggestions: SuggestedBullet[]
+}
+
+export interface SuggestionsResponse {
+  job_id: number
+  generated_at: string
+  focus_keywords: string[]
+  sections: {
+    work_experience: SuggestedSubsection[]
+    technical_projects: SuggestedSubsection[]
+  }
+}
+
+export interface DragBulletPayload {
+  text: string
+  source: BulletSource
+  keywords_targeted: string[]
+}

@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, type DragEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Check, ArrowRight, Loader2, Undo } from 'lucide-react'
-import type { BulletSlot as BulletSlotType, Section, BulletSource } from '@/types'
+import type { BulletSlot as BulletSlotType, Section, BulletSource, DragBulletPayload } from '@/types'
+
+const DRAG_BULLET_MIME = 'application/x-cv-bullet'
 
 interface BulletSlotProps {
   slot: BulletSlotType
@@ -12,6 +14,7 @@ interface BulletSlotProps {
   onUnapprove: (slotIndex: number) => void
   onRephrase: (slotIndex: number, section: Section, subsection: string) => void
   onRestore: (slotIndex: number, historyIndex: number) => void
+  onDropSuggestion: (slotIndex: number, payload: DragBulletPayload) => void
   isRephrasing: boolean
   canRephrase: boolean
 }
@@ -55,15 +58,48 @@ export function BulletSlot({
   onUnapprove,
   onRephrase,
   onRestore,
+  onDropSuggestion,
   isRephrasing,
   canRephrase,
 }: BulletSlotProps) {
   const [showHistory, setShowHistory] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
   const { current_candidate, is_approved, rephrase_history, slot_index, section, subsection } = slot
+
+  const handleDrop = (event: DragEvent) => {
+    event.preventDefault()
+    setIsDragOver(false)
+    const raw = event.dataTransfer.getData(DRAG_BULLET_MIME)
+    if (!raw) return
+    try {
+      const payload = JSON.parse(raw) as DragBulletPayload
+      if (!payload.text?.trim()) return
+      onDropSuggestion(slot_index, {
+        text: payload.text.trim(),
+        source: payload.source ?? 'story_draft',
+        keywords_targeted: payload.keywords_targeted ?? [],
+      })
+    } catch {
+      // Ignore invalid drag payloads.
+    }
+  }
+
+  const dropEvents = {
+    onDragOver: (event: DragEvent) => {
+      event.preventDefault()
+      setIsDragOver(true)
+    },
+    onDragLeave: () => setIsDragOver(false),
+    onDrop: handleDrop,
+  }
 
   if (!current_candidate) {
     return (
-      <Card className="p-2 bg-bg-elevated border-border-subtle opacity-50">
+      <Card
+        className={`p-2 bg-bg-elevated border-border-subtle opacity-50 transition-[opacity,border-style,border-color] duration-100
+        ${isDragOver ? 'border-dashed border-accent-border !opacity-30' : ''}`}
+        {...dropEvents}
+      >
         <p className="text-xs text-text-muted italic">No bullet available for this slot</p>
       </Card>
     )
@@ -72,7 +108,11 @@ export function BulletSlot({
   // Accepted (compact) state
   if (is_approved) {
     return (
-      <Card className="border-l-2 border-l-status-ok border-border-subtle bg-bg-surface transition-opacity duration-150">
+      <Card
+        className={`border-l-2 border-l-status-ok border-border-subtle bg-bg-surface transition-[opacity,border-style,border-color] duration-100
+          ${isDragOver ? 'border-dashed border-accent-border opacity-50' : ''}`}
+        {...dropEvents}
+      >
         <Tooltip>
           <TooltipTrigger>
             <div className="p-2 cursor-default text-left w-full">
@@ -118,7 +158,11 @@ export function BulletSlot({
 
   // Pending (expanded) state
   return (
-    <Card className="border-border-default bg-bg-surface">
+    <Card
+      className={`border-border-default bg-bg-surface transition-[opacity,border-style,border-color] duration-100
+        ${isDragOver ? 'border-dashed border-accent-border opacity-50' : ''}`}
+      {...dropEvents}
+    >
       <div className="p-3">
         <p className="text-xs font-mono text-text-primary leading-relaxed">
           {current_candidate.text}

@@ -2,15 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { usePlan } from '@/hooks/usePlan'
 import { useQueuedJobs } from '@/hooks/useQueuedJobs'
-import { useApproveSlot, useUnapproveSlot, useRephrase, useRestoreBullet } from '@/hooks/useRephrase'
+import { useApproveSlot, useUnapproveSlot, useRephrase, useRestoreBullet, useReplaceSlotCandidate } from '@/hooks/useRephrase'
 import { useApproveCV } from '@/hooks/useApproveCV'
 import { useSaveEnrichment } from '@/hooks/useSaveEnrichment'
+import { useSuggestions } from '@/hooks/useSuggestions'
 import { TopBar } from '@/components/TopBar'
 import { JobPanel } from '@/components/JobPanel'
 import { BulletBuilder } from '@/components/BulletBuilder'
 import { AlternativesPanel } from '@/components/AlternativesPanel'
 import { ResizableColumns } from '@/components/ResizableColumns'
-import type { EnrichmentDraft, Job, Section } from '@/types'
+import type { DragBulletPayload, EnrichmentDraft, Job, Section } from '@/types'
 
 const EMPTY_DRAFT: EnrichmentDraft = {
   job_description_raw: '',
@@ -34,6 +35,7 @@ export default function App() {
   const unapproveSlot = useUnapproveSlot(jobId ?? 0)
   const rephrase = useRephrase(jobId ?? 0)
   const restoreBullet = useRestoreBullet(jobId ?? 0)
+  const replaceSlotCandidate = useReplaceSlotCandidate(jobId ?? 0)
   const approveCV = useApproveCV(jobId ?? 0)
   const saveEnrichment = useSaveEnrichment(jobId ?? 0)
 
@@ -82,6 +84,7 @@ export default function App() {
 
   const isInEnrichmentStage = !isEnrichmentConfirmed || isDraftDirty || saveEnrichment.isPending
   const canRephrase = isEnrichmentConfirmed && !isDraftDirty && !saveEnrichment.isPending
+  const suggestions = useSuggestions(jobId, canRephrase)
 
   const handleChangeDraft = (nextDraft: EnrichmentDraft) => {
     setDraft(nextDraft)
@@ -148,6 +151,15 @@ export default function App() {
     })
   }
 
+  const handleDropSuggestion = (slotIndex: number, payload: DragBulletPayload) => {
+    replaceSlotCandidate.mutate({
+      slotIndex,
+      text: payload.text,
+      source: payload.source,
+      keywords: payload.keywords_targeted,
+    })
+  }
+
   const handleGenerateCV = async () => {
     if (!plan) return
     try {
@@ -191,9 +203,9 @@ export default function App() {
           ) : undefined
         }
         initialLeftWidth={280}
-        initialRightWidth={240}
+        initialRightWidth={340}
         minLeftWidth={200}
-        minRightWidth={160}
+        minRightWidth={220}
         minCenterWidth={480}
         left={
           <JobPanel
@@ -225,10 +237,17 @@ export default function App() {
             isRephrasing={rephrase.isPending}
             rephrasingSlotIndex={rephrasingSlotIndex}
             canRephrase={canRephrase}
+            onDropSuggestion={handleDropSuggestion}
           />
         }
         right={
-          <AlternativesPanel />
+          <AlternativesPanel
+            isUnlocked={canRephrase}
+            suggestions={suggestions.data}
+            isLoading={suggestions.isLoading}
+            isRefreshing={suggestions.isRefreshing}
+            error={suggestions.error?.message ?? null}
+          />
         }
       />
     </div>

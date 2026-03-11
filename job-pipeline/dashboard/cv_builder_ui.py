@@ -13,6 +13,7 @@ from flask_cors import CORS
 
 from agent.bullet_rephraser import rephrase_bullet
 from agent.bullet_selector import build_selection_plan, load_bullet_bank
+from agent.bullet_suggester import generate_suggestions_for_section
 from agent.cv_renderer import render_cv
 from agent.jd_parser import classify_role_family, classify_seniority
 from agent.story_drafter import approve_bullet_for_bank
@@ -71,6 +72,14 @@ TEMPLATE_MAP_PATH = resolve_profile_asset([
 BULLET_BANK_PATH = resolve_profile_asset([
     USER_PROFILE_DIR / "master_bullets.md",
     PROFILE_DIR / "master_bullets.md",
+])
+STORIES_PATH = resolve_profile_asset([
+    USER_PROFILE_DIR / "stories.md",
+    PROFILE_DIR / "stories.md",
+])
+EXPERIENCE_PATH = resolve_profile_asset([
+    USER_PROFILE_DIR / "experience.md",
+    PROFILE_DIR / "experience.md",
 ])
 
 
@@ -247,6 +256,30 @@ def build_plan_for_job(conn, job: dict, user_id: int = 1):
 # Store active sessions (in production, use Redis or DB)
 active_plans = {}
 active_keywords = {}
+active_suggestions = {}
+
+
+def get_profile_context_text() -> str:
+    """Load user profile context used for suggestion generation prompts."""
+    chunks: list[str] = []
+
+    if EXPERIENCE_PATH.exists():
+        chunks.append(EXPERIENCE_PATH.read_text(encoding="utf-8"))
+
+    if BULLET_BANK_PATH.exists():
+        chunks.append(BULLET_BANK_PATH.read_text(encoding="utf-8"))
+
+    return "\n\n".join(chunk for chunk in chunks if chunk).strip()
+
+
+def build_slots_map_by_subsection(slots) -> dict[str, list[str]]:
+    """Map subsection -> existing current candidate bullet texts."""
+    grouped: dict[str, list[str]] = {}
+    for slot in slots:
+        grouped.setdefault(slot.subsection, [])
+        if slot.current_candidate:
+            grouped[slot.subsection].append(slot.current_candidate.text)
+    return grouped
 
 
 @app.route("/")
@@ -363,6 +396,74 @@ def rephrase():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/suggestions/<int:job_id>")
+def get_suggestions(job_id: int):
+    """Generate or return cached right-panel bullet suggestions for a job."""
+    try:
+        if job_id in active_suggestions:
+            return jsonify(active_suggestions[job_id])
+
+        conn = get_db_connection()
+        job = get_job_by_id(conn, job_id)
+
+        if not job:
+            conn.close()
+            return jsonify({"error": f"Job {job_id} not found"}), 404
+
+        plan = active_plans.get(job_id)
+        keywords = active_keywords.get(job_id)
+        if plan is None or keywords is None:
+            plan, keywords = build_plan_for_job(conn, job)
+            active_plans[job_id] = plan
+            active_keywords[job_id] = keywords
+
+        conn.close()
+
+        uncovered_keywords = plan.uncovered_keywords or []
+        required_keywords = (keywords or {}).get("required_keywords", [])
+        profile_context = get_profile_context_text()
+
+        work_slots_map = build_slots_map_by_subsection(plan.work_experience_slots)
+        project_slots_map = build_slots_map_by_subsection(plan.technical_project_slots)
+
+        client = anthropic.Anthropic()
+        work_suggestions = generate_suggestions_for_section(
+            section="work_experience",
+            slots_by_subsection=work_slots_map,
+            uncovered_keywords=uncovered_keywords,
+            required_keywords=required_keywords,
+            stories_path=STORIES_PATH,
+            profile_context=profile_context,
+            client=client,
+            user_id=plan.user_id,
+        )
+        project_suggestions = generate_suggestions_for_section(
+            section="technical_projects",
+            slots_by_subsection=project_slots_map,
+            uncovered_keywords=uncovered_keywords,
+            required_keywords=required_keywords,
+            stories_path=STORIES_PATH,
+            profile_context=profile_context,
+            client=client,
+            user_id=plan.user_id,
+        )
+
+        payload = {
+            "job_id": job_id,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "focus_keywords": uncovered_keywords,
+            "sections": {
+                "work_experience": work_suggestions,
+                "technical_projects": project_suggestions,
+            },
+        }
+
+        active_suggestions[job_id] = payload
+        return jsonify(payload)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/jobs/<int:job_id>/enrichment", methods=["PATCH"])
 def update_enrichment(job_id: int):
     """Persist user-edited enrichment fields for a job."""
@@ -405,6 +506,7 @@ def update_enrichment(job_id: int):
 
         active_plans.pop(job_id, None)
         active_keywords.pop(job_id, None)
+        active_suggestions.pop(job_id, None)
 
         return jsonify({"status": "saved", "job": job})
     except Exception as e:
