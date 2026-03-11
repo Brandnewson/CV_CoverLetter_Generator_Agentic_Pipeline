@@ -19,6 +19,8 @@ from discovery.enrichment import (
     extract_technologies_deterministic,
     build_enrichment,
     ENRICHMENT_VERSION,
+    normalize_company_description_text,
+    normalize_job_description_markdown,
 )
 
 # Load environment
@@ -142,6 +144,38 @@ class TestNormaliseJob:
             
             result = normalise_job(mock_row)
             assert result["remote_type"] == expected, f"Failed for input {input_val}"
+
+    def test_normalise_job_cleans_raw_descriptions(self):
+        """normalise_job removes noisy whitespace from company/JD fields."""
+        mock_row = MagicMock()
+        mock_row.get = MagicMock(side_effect=lambda k, d=None: {
+            "company": "Test Corp",
+            "title": "Engineer",
+            "job_url": "https://test.com",
+            "description": "About the role\n\n\n• Build systems\n\n• Ship features",
+            "company_description": "We build race systems.\n\n\nFounded in 2010.",
+        }.get(k, d))
+
+        result = normalise_job(mock_row)
+
+        assert result["job_description_raw"] == "About the role\n\n- Build systems\n\n- Ship features"
+        assert result["company_description_raw"] == "We build race systems.\n\nFounded in 2010."
+
+
+class TestDescriptionNormalizers:
+    """Tests for shared description cleanup helpers."""
+
+    def test_normalize_company_description_text_collapses_blank_lines(self):
+        raw = "We build software.\n\n\nAcross motorsport teams.\n\nCulture-first company."
+        assert normalize_company_description_text(raw) == (
+            "We build software.\n\nAcross motorsport teams.\n\nCulture-first company."
+        )
+
+    def test_normalize_job_description_markdown_preserves_bullets(self):
+        raw = "Role overview\n\n\n• Build pipelines\n• Improve ATS scoring\n\nWork with product"
+        assert normalize_job_description_markdown(raw) == (
+            "Role overview\n\n- Build pipelines\n- Improve ATS scoring\n\nWork with product"
+        )
 
 
 @pytest.fixture

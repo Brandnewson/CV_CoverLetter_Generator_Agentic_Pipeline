@@ -12,7 +12,11 @@ import psycopg2.extras
 import yaml
 from dotenv import load_dotenv
 
-from discovery.enrichment import build_enrichment
+from discovery.enrichment import (
+    build_enrichment,
+    normalize_company_description_text,
+    normalize_job_description_markdown,
+)
 
 # Load environment variables
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -164,8 +168,12 @@ def normalise_job(raw_row: Any, search_term: str = "") -> dict:
         except ValueError:
             date_posted = date.today()
     
-    job_description_raw = pick_first_text(["description", "job_description"])
-    company_description_raw = pick_first_text(["company_description", "company_about", "about_company"]) 
+    job_description_raw = normalize_job_description_markdown(
+        pick_first_text(["description", "job_description"])
+    )
+    company_description_raw = normalize_company_description_text(
+        pick_first_text(["company_description", "company_about", "about_company"])
+    )
 
     return {
         "source": safe_get("site", "unknown"),

@@ -4,6 +4,8 @@ interface ResizableColumnsProps {
   left: ReactNode
   center: ReactNode
   right: ReactNode
+  overlayContent?: ReactNode
+  focusLeftPanel?: boolean
   /** Initial width of left column in pixels */
   initialLeftWidth?: number
   /** Initial width of right column in pixels */
@@ -20,6 +22,8 @@ export function ResizableColumns({
   left,
   center,
   right,
+  overlayContent,
+  focusLeftPanel = false,
   initialLeftWidth = 280,
   initialRightWidth = 240,
   minLeftWidth = 200,
@@ -32,6 +36,7 @@ export function ResizableColumns({
   const dragging = useRef<'left' | 'right' | null>(null)
   const startX = useRef(0)
   const startWidth = useRef(0)
+  const preFocusWidths = useRef<{ left: number; right: number } | null>(null)
 
   const onPointerDown = useCallback(
     (handle: 'left' | 'right', e: React.PointerEvent) => {
@@ -76,10 +81,34 @@ export function ResizableColumns({
     }
   }, [leftWidth, rightWidth, minLeftWidth, minRightWidth, minCenterWidth])
 
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const containerWidth = containerRef.current.offsetWidth
+    const maxLeft = containerWidth - minRightWidth - minCenterWidth - 8
+    const preferredLeft = Math.min(Math.max(520, Math.floor(containerWidth * 0.55)), maxLeft)
+
+    if (focusLeftPanel) {
+      if (!preFocusWidths.current) {
+        preFocusWidths.current = { left: leftWidth, right: rightWidth }
+      }
+      setLeftWidth((current) => Math.min(Math.max(current, preferredLeft), maxLeft))
+      setRightWidth(minRightWidth)
+      return
+    }
+
+    if (preFocusWidths.current) {
+      const { left, right } = preFocusWidths.current
+      setLeftWidth(left)
+      setRightWidth(right)
+      preFocusWidths.current = null
+    }
+  }, [focusLeftPanel, leftWidth, rightWidth, minCenterWidth, minRightWidth])
+
   return (
-    <div ref={containerRef} className="flex-1 flex overflow-hidden">
+    <div ref={containerRef} className="relative flex-1 flex overflow-hidden">
       {/* Left column */}
-      <div className="overflow-y-auto shrink-0" style={{ width: leftWidth }}>
+      <div className="overflow-y-auto shrink-0 transition-[width] duration-200 ease-out" style={{ width: leftWidth }}>
         {left}
       </div>
 
@@ -101,9 +130,17 @@ export function ResizableColumns({
       />
 
       {/* Right column */}
-      <div className="overflow-y-auto shrink-0" style={{ width: rightWidth }}>
+      <div className="overflow-y-auto shrink-0 transition-[width] duration-200 ease-out" style={{ width: rightWidth }}>
         {right}
       </div>
+
+      {overlayContent && (
+        <div className="absolute inset-y-0 right-0 z-20 flex items-center justify-center bg-bg-base/70 backdrop-blur-[2px]" style={{ left: leftWidth + 4 }}>
+          <div className="mx-6 max-w-md rounded-lg border border-accent-border bg-bg-surface/95 px-5 py-4 text-center shadow-2xl">
+            {overlayContent}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

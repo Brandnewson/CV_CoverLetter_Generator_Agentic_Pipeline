@@ -66,6 +66,86 @@ def _normalize_text(value: str | None) -> str:
     return cleaned
 
 
+def _normalize_line_endings(value: str | None) -> str:
+    if not value:
+        return ""
+    return value.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " ")
+
+
+def normalize_company_description_text(value: str | None) -> str:
+    """Collapse noisy scraping whitespace into readable company paragraphs."""
+    text = _normalize_line_endings(value)
+    if not text.strip():
+        return ""
+
+    paragraphs: list[str] = []
+    current_lines: list[str] = []
+
+    for raw_line in text.split("\n"):
+        line = re.sub(r"[ \t]+", " ", raw_line).strip()
+        if not line:
+            if current_lines:
+                paragraphs.append(" ".join(current_lines))
+                current_lines = []
+            continue
+        current_lines.append(line)
+
+    if current_lines:
+        paragraphs.append(" ".join(current_lines))
+
+    return "\n\n".join(paragraphs)
+
+
+def normalize_job_description_markdown(value: str | None) -> str:
+    """Normalize scraped job text into cleaner markdown-friendly content."""
+    text = _normalize_line_endings(value)
+    if not text.strip():
+        return ""
+
+    output_lines: list[str] = []
+    paragraph_lines: list[str] = []
+
+    def flush_paragraph() -> None:
+        nonlocal paragraph_lines
+        if paragraph_lines:
+            output_lines.append(" ".join(paragraph_lines))
+            paragraph_lines = []
+
+    for raw_line in text.split("\n"):
+        line = re.sub(r"^[•●▪◦·]\s*", "- ", raw_line)
+        line = re.sub(r"[ \t]+", " ", line).strip()
+
+        if not line:
+            flush_paragraph()
+            if output_lines and output_lines[-1] != "":
+                output_lines.append("")
+            continue
+
+        is_heading = bool(re.match(r"^#{1,6}\s+", line)) or (line.endswith(":") and len(line) <= 120)
+        is_bullet = bool(re.match(r"^[-*+]\s+", line))
+
+        if is_heading or is_bullet:
+            flush_paragraph()
+            output_lines.append(line)
+        else:
+            paragraph_lines.append(line)
+
+    flush_paragraph()
+
+    while output_lines and output_lines[0] == "":
+        output_lines.pop(0)
+    while output_lines and output_lines[-1] == "":
+        output_lines.pop()
+
+    normalized_lines: list[str] = []
+    for line in output_lines:
+        if line == "" and normalized_lines and normalized_lines[-1] == "":
+            continue
+        normalized_lines.append(line)
+
+    return "\n".join(normalized_lines)
+
+
 def extract_technologies_deterministic(job_description: str) -> list[str]:
     """Deterministically extract technology keywords from text."""
     text = job_description.lower()

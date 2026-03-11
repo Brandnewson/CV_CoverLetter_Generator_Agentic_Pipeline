@@ -18,6 +18,10 @@ from agent.jd_parser import classify_role_family, classify_seniority
 from agent.story_drafter import approve_bullet_for_bank
 from agent.template_extractor import load_template_map
 from agent.validators import UserSelections
+from discovery.enrichment import (
+    normalize_company_description_text,
+    normalize_job_description_markdown,
+)
 
 # Load environment
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -177,12 +181,14 @@ def update_job_enrichment(
         cur.execute(
             """
             UPDATE jobs
-            SET job_description_raw = %s,
+            SET description = %s,
+                job_description_raw = %s,
                 company_description_raw = %s,
                 enrichment_keywords = %s
             WHERE id = %s
             """,
             (
+                job_description_raw,
                 job_description_raw,
                 company_description_raw,
                 Json(enrichment_keywords),
@@ -360,8 +366,8 @@ def update_enrichment(job_id: int):
     try:
         data = request.json or {}
 
-        job_description_raw = (data.get("job_description_raw") or "").strip()
-        company_description_raw = (data.get("company_description_raw") or "").strip()
+        job_description_raw = normalize_job_description_markdown(data.get("job_description_raw"))
+        company_description_raw = normalize_company_description_text(data.get("company_description_raw"))
 
         raw_keywords = data.get("enrichment_keywords") or {}
         if not isinstance(raw_keywords, dict):

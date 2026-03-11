@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { KeywordTag } from '@/components/KeywordTag'
 import { ExternalLink } from 'lucide-react'
+import { normalizeCompanyDescriptionText, normalizeJobDescriptionMarkdown } from '@/lib/jobText'
 import type { CVSelectionPlan, QueuedJob, Job, EnrichmentDraft } from '@/types'
 
 interface JobPanelProps {
@@ -19,6 +22,8 @@ interface JobPanelProps {
   isSavingDraft: boolean
   isDraftDirty: boolean
   saveError?: string | null
+  isEnrichmentConfirmed: boolean
+  draftSyncVersion: number
 }
 
 function FitScoreBar({ score }: { score: number }) {
@@ -95,6 +100,8 @@ export function JobPanel({
   isSavingDraft,
   isDraftDirty,
   saveError,
+  isEnrichmentConfirmed,
+  draftSyncVersion,
 }: JobPanelProps) {
   if (isLoading) {
     return (
@@ -120,12 +127,20 @@ export function JobPanel({
   const skills = draft.enrichment_keywords.skills
   const abilities = draft.enrichment_keywords.abilities
 
+  const [technologyText, setTechnologyText] = useState('')
+  const [skillsText, setSkillsText] = useState('')
+  const [abilitiesText, setAbilitiesText] = useState('')
+
+  useEffect(() => {
+    setTechnologyText(technologies.join('\n'))
+    setSkillsText(skills.join('\n'))
+    setAbilitiesText(abilities.join('\n'))
+  }, [draftSyncVersion])
+
   const allKeywords = [...technologies, ...skills, ...abilities]
 
-  const companyDescriptionText = draft.company_description_raw.trim()
-  const jobDescriptionText = draft.job_description_raw.trim()
-
-  const asMultiline = (items: string[]) => items.join('\n')
+  const companyDescriptionText = normalizeCompanyDescriptionText(draft.company_description_raw)
+  const jobDescriptionText = normalizeJobDescriptionMarkdown(draft.job_description_raw)
 
   const updateKeywords = (
     field: 'technologies' | 'skills' | 'abilities',
@@ -212,20 +227,30 @@ export function JobPanel({
               Enrichment
             </p>
             <Button
-              size="sm"
-              variant="outline"
-              className="h-6 px-2 text-[10px]"
+              size="default"
+              variant={isEnrichmentConfirmed && !isDraftDirty ? 'secondary' : 'default'}
+              className={
+                isEnrichmentConfirmed && !isDraftDirty
+                  ? 'h-9 px-4 text-xs bg-accent-color/20 text-text-secondary hover:bg-accent-color/25 border border-accent-border/40'
+                  : 'h-9 px-4 text-xs bg-accent-color hover:bg-accent-hover text-white'
+              }
               onClick={onSaveDraft}
-              disabled={!isDraftDirty || isSavingDraft}
+              disabled={isSavingDraft}
             >
-              {isSavingDraft ? 'Saving...' : 'Save Fields'}
+              {isSavingDraft ? 'Confirming...' : 'Confirm job details'}
             </Button>
           </div>
           {saveError && (
             <p className="text-[10px] text-status-error">{saveError}</p>
           )}
+          {!saveError && !isEnrichmentConfirmed && !isDraftDirty && (
+            <p className="text-[10px] text-status-info">This is the default first stage. Confirm the job details to move on.</p>
+          )}
           {!saveError && isDraftDirty && (
-            <p className="text-[10px] text-status-warn">Unsaved edits. Save to enable rephrase.</p>
+            <p className="text-[10px] text-status-warn">Changes detected. Confirm job details to continue.</p>
+          )}
+          {!saveError && isEnrichmentConfirmed && !isDraftDirty && (
+            <p className="text-[10px] text-status-ok">Job details confirmed. Rephraser and bullet selection are unlocked.</p>
           )}
 
           <div>
@@ -233,8 +258,11 @@ export function JobPanel({
               Keywords
             </p>
             <textarea
-              value={asMultiline(technologies)}
-              onChange={(e) => updateKeywords('technologies', e.target.value)}
+              value={technologyText}
+              onChange={(e) => {
+                setTechnologyText(e.target.value)
+                updateKeywords('technologies', e.target.value)
+              }}
               className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary"
               placeholder="One keyword per line or comma-separated"
             />
@@ -245,43 +273,45 @@ export function JobPanel({
             </div>
           </div>
 
-          {skills.length > 0 && (
-            <div>
-              <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
-                Skills
-              </p>
-              <textarea
-                value={asMultiline(skills)}
-                onChange={(e) => updateKeywords('skills', e.target.value)}
-                className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
-                placeholder="One skill per line or comma-separated"
-              />
-              <div className="flex flex-wrap gap-1">
-                {skills.map((kw) => (
-                  <KeywordTag key={`skill-${kw}`} keyword={kw} variant="nice-to-have" />
-                ))}
-              </div>
+          <div>
+            <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
+              Skills
+            </p>
+            <textarea
+              value={skillsText}
+              onChange={(e) => {
+                setSkillsText(e.target.value)
+                updateKeywords('skills', e.target.value)
+              }}
+              className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
+              placeholder="One skill per line or comma-separated"
+            />
+            <div className="flex flex-wrap gap-1">
+              {skills.map((kw) => (
+                <KeywordTag key={`skill-${kw}`} keyword={kw} variant="nice-to-have" />
+              ))}
             </div>
-          )}
+          </div>
 
-          {abilities.length > 0 && (
-            <div>
-              <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
-                Abilities
-              </p>
-              <textarea
-                value={asMultiline(abilities)}
-                onChange={(e) => updateKeywords('abilities', e.target.value)}
-                className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
-                placeholder="One ability per line or comma-separated"
-              />
-              <div className="flex flex-wrap gap-1">
-                {abilities.map((kw) => (
-                  <KeywordTag key={`ability-${kw}`} keyword={kw} variant="required" />
-                ))}
-              </div>
+          <div>
+            <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
+              Abilities
+            </p>
+            <textarea
+              value={abilitiesText}
+              onChange={(e) => {
+                setAbilitiesText(e.target.value)
+                updateKeywords('abilities', e.target.value)
+              }}
+              className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
+              placeholder="One ability per line or comma-separated"
+            />
+            <div className="flex flex-wrap gap-1">
+              {abilities.map((kw) => (
+                <KeywordTag key={`ability-${kw}`} keyword={kw} variant="required" />
+              ))}
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -336,12 +366,24 @@ export function JobPanel({
             className="w-full min-h-32 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
             placeholder="Paste full job description"
           />
-          <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
+          <div className="rounded border border-border-subtle bg-bg-elevated/40 p-3 text-xs text-text-secondary leading-relaxed">
             {jobDescriptionText ? (
-              <HighlightedDescription
-                text={jobDescriptionText}
-                keywords={allKeywords}
-              />
+              <div className="markdown-preview">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="my-2 text-text-secondary">{children}</p>,
+                    ul: ({ children }) => <ul className="my-2 list-disc pl-5 text-text-secondary">{children}</ul>,
+                    ol: ({ children }) => <ol className="my-2 list-decimal pl-5 text-text-secondary">{children}</ol>,
+                    li: ({ children }) => <li className="my-0.5">{children}</li>,
+                    h1: ({ children }) => <h1 className="my-2 text-sm font-semibold text-text-primary">{children}</h1>,
+                    h2: ({ children }) => <h2 className="my-2 text-sm font-semibold text-text-primary">{children}</h2>,
+                    h3: ({ children }) => <h3 className="my-2 text-xs font-semibold uppercase tracking-wide text-text-primary">{children}</h3>,
+                    strong: ({ children }) => <strong className="font-semibold text-text-primary">{children}</strong>,
+                  }}
+                >
+                  {jobDescriptionText}
+                </ReactMarkdown>
+              </div>
             ) : (
               <span className="text-text-muted">No job description captured during discovery.</span>
             )}
