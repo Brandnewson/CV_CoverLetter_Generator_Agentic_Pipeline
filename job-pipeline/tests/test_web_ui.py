@@ -165,6 +165,7 @@ class TestFlaskApp:
                 assert "/build/<int:job_id>" in routes
                 assert "/api/plan/<int:job_id>" in routes
                 assert "/api/rephrase" in routes
+                assert "/api/jobs/<int:job_id>/enrichment" in routes
                 assert "/api/approve/<int:job_id>" in routes
                 assert "/api/cv/<int:job_id>/download" in routes
                 assert "/api/jobs/queued" in routes
@@ -293,6 +294,56 @@ class TestAPIEndpoints:
             }
         )
         
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "error" in data
+
+    def test_update_enrichment_saves_job_fields(self, client, sample_job):
+        """PATCH /api/jobs/<job_id>/enrichment persists edited fields."""
+        from dashboard import cv_builder_ui
+
+        cv_builder_ui.active_plans[1] = "cached"
+        cv_builder_ui.active_keywords[1] = {"required_keywords": ["python"]}
+
+        with patch("dashboard.cv_builder_ui.get_db_connection") as mock_conn:
+            with patch("dashboard.cv_builder_ui.update_job_enrichment") as mock_update:
+                with patch("dashboard.cv_builder_ui.get_job_by_id") as mock_get_job:
+                    mock_update.return_value = True
+                    mock_get_job.return_value = sample_job
+                    mock_conn.return_value.commit = MagicMock()
+                    mock_conn.return_value.close = MagicMock()
+
+                    response = client.patch(
+                        "/api/jobs/1/enrichment",
+                        json={
+                            "job_description_raw": "Updated JD",
+                            "company_description_raw": "Updated company",
+                            "enrichment_keywords": {
+                                "technologies": ["python", "react"],
+                                "skills": ["communication"],
+                                "abilities": ["ownership"],
+                            },
+                        },
+                    )
+
+                    assert response.status_code == 200
+                    data = response.get_json()
+                    assert data["status"] == "saved"
+                    assert "job" in data
+                    assert 1 not in cv_builder_ui.active_plans
+                    assert 1 not in cv_builder_ui.active_keywords
+
+    def test_update_enrichment_invalid_keywords_shape(self, client):
+        """PATCH /api/jobs/<job_id>/enrichment validates keyword payload type."""
+        response = client.patch(
+            "/api/jobs/1/enrichment",
+            json={
+                "job_description_raw": "Updated JD",
+                "company_description_raw": "Updated company",
+                "enrichment_keywords": ["python", "react"],
+            },
+        )
+
         assert response.status_code == 400
         data = response.get_json()
         assert "error" in data

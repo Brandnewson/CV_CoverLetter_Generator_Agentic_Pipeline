@@ -14,6 +14,7 @@ interface BulletBuilderProps {
   onApproveAll: () => void
   isRephrasing: boolean
   rephrasingSlotIndex: number | null
+  canRephrase: boolean
 }
 
 interface GroupedSlots {
@@ -82,6 +83,7 @@ export function BulletBuilder({
   onApproveAll,
   isRephrasing,
   rephrasingSlotIndex,
+  canRephrase,
 }: BulletBuilderProps) {
   const [hiddenProjects, setHiddenProjects] = useState<Set<string>>(new Set())
 
@@ -198,6 +200,7 @@ export function BulletBuilder({
                           isRephrasing={
                             isRephrasing && rephrasingSlotIndex === slot.slot_index
                           }
+                          canRephrase={canRephrase}
                         />
                       ))}
                     </div>

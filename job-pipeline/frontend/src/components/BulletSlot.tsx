@@ -13,6 +13,7 @@ interface BulletSlotProps {
   onRephrase: (slotIndex: number, section: Section, subsection: string) => void
   onRestore: (slotIndex: number, historyIndex: number) => void
   isRephrasing: boolean
+  canRephrase: boolean
 }
 
 function CharCount({ count }: { count: number }) {
@@ -55,6 +56,7 @@ export function BulletSlot({
   onRephrase,
   onRestore,
   isRephrasing,
+  canRephrase,
 }: BulletSlotProps) {
   const [showHistory, setShowHistory] = useState(false)
   const { current_candidate, is_approved, rephrase_history, slot_index, section, subsection } = slot
@@ -143,14 +145,14 @@ export function BulletSlot({
               variant="outline"
               className="h-6 px-2 text-[10px] border-border-default text-text-secondary hover:text-text-primary hover:bg-bg-elevated"
               onClick={() => onRephrase(slot_index, section, subsection)}
-              disabled={isRephrasing}
+              disabled={isRephrasing || !canRephrase}
             >
               {isRephrasing ? (
                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
               ) : (
                 <ArrowRight className="h-3 w-3 mr-1" />
               )}
-              Rephrase
+              {canRephrase ? 'Rephrase' : 'Save First'}
             </Button>
             <Button
               size="sm"

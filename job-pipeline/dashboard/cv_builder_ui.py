@@ -6,6 +6,7 @@ from pathlib import Path
 
 import anthropic
 import psycopg2
+from psycopg2.extras import Json
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 from flask_cors import CORS
@@ -142,6 +143,54 @@ def get_latest_queued_job_id(conn) -> int | None:
     if jobs:
         return jobs[0]["id"]
     return None
+
+
+def normalize_keyword_list(values) -> list[str]:
+    """Normalize keyword inputs into a de-duplicated list of strings."""
+    if values is None:
+        return []
+
+    if isinstance(values, str):
+        items = []
+        for line in values.splitlines():
+            parts = [part.strip() for part in line.split(",")]
+            items.extend(parts)
+    elif isinstance(values, list):
+        items = [str(value).strip() for value in values]
+    else:
+        raise ValueError("Keyword fields must be arrays or newline/comma separated text")
+
+    cleaned = [item for item in items if item]
+    deduped = list(dict.fromkeys(cleaned))
+    return deduped
+
+
+def update_job_enrichment(
+    conn,
+    job_id: int,
+    job_description_raw: str,
+    company_description_raw: str,
+    enrichment_keywords: dict,
+) -> bool:
+    """Update enrichment fields for a single job."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE jobs
+            SET job_description_raw = %s,
+                company_description_raw = %s,
+                enrichment_keywords = %s
+            WHERE id = %s
+            """,
+            (
+                job_description_raw,
+                company_description_raw,
+                Json(enrichment_keywords),
+                job_id,
+            ),
+        )
+        updated = cur.rowcount > 0
+    return updated
 
 
 def build_plan_for_job(conn, job: dict, user_id: int = 1):
@@ -301,6 +350,54 @@ def rephrase():
         slot.current_candidate = new_bullet
         
         return jsonify(new_bullet.model_dump())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/jobs/<int:job_id>/enrichment", methods=["PATCH"])
+def update_enrichment(job_id: int):
+    """Persist user-edited enrichment fields for a job."""
+    try:
+        data = request.json or {}
+
+        job_description_raw = (data.get("job_description_raw") or "").strip()
+        company_description_raw = (data.get("company_description_raw") or "").strip()
+
+        raw_keywords = data.get("enrichment_keywords") or {}
+        if not isinstance(raw_keywords, dict):
+            return jsonify({"error": "enrichment_keywords must be an object"}), 400
+
+        try:
+            enrichment_keywords = {
+                "technologies": normalize_keyword_list(raw_keywords.get("technologies", [])),
+                "skills": normalize_keyword_list(raw_keywords.get("skills", [])),
+                "abilities": normalize_keyword_list(raw_keywords.get("abilities", [])),
+            }
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        conn = get_db_connection()
+        updated = update_job_enrichment(
+            conn=conn,
+            job_id=job_id,
+            job_description_raw=job_description_raw,
+            company_description_raw=company_description_raw,
+            enrichment_keywords=enrichment_keywords,
+        )
+
+        if not updated:
+            conn.close()
+            return jsonify({"error": f"Job {job_id} not found"}), 404
+
+        conn.commit()
+
+        job = get_job_by_id(conn, job_id)
+        conn.close()
+
+        active_plans.pop(job_id, None)
+        active_keywords.pop(job_id, None)
+
+        return jsonify({"status": "saved", "job": job})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

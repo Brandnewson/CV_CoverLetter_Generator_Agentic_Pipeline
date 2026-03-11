@@ -1,9 +1,10 @@
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { KeywordTag } from '@/components/KeywordTag'
 import { ExternalLink } from 'lucide-react'
-import type { CVSelectionPlan, QueuedJob, Job } from '@/types'
+import type { CVSelectionPlan, QueuedJob, Job, EnrichmentDraft } from '@/types'
 
 interface JobPanelProps {
   plan: CVSelectionPlan | undefined
@@ -12,6 +13,12 @@ interface JobPanelProps {
   queuedJobs: QueuedJob[]
   currentJobId: number
   onSelectJob: (jobId: number) => void
+  draft: EnrichmentDraft
+  onChangeDraft: (draft: EnrichmentDraft) => void
+  onSaveDraft: () => void
+  isSavingDraft: boolean
+  isDraftDirty: boolean
+  saveError?: string | null
 }
 
 function FitScoreBar({ score }: { score: number }) {
@@ -82,6 +89,12 @@ export function JobPanel({
   queuedJobs,
   currentJobId,
   onSelectJob,
+  draft,
+  onChangeDraft,
+  onSaveDraft,
+  isSavingDraft,
+  isDraftDirty,
+  saveError,
 }: JobPanelProps) {
   if (isLoading) {
     return (
@@ -103,14 +116,32 @@ export function JobPanel({
     )
   }
 
-  const technologies = job?.enrichment_keywords?.technologies ?? []
-  const skills = job?.enrichment_keywords?.skills ?? []
-  const abilities = job?.enrichment_keywords?.abilities ?? []
+  const technologies = draft.enrichment_keywords.technologies
+  const skills = draft.enrichment_keywords.skills
+  const abilities = draft.enrichment_keywords.abilities
 
   const allKeywords = [...technologies, ...skills, ...abilities]
 
-  const companyDescriptionText = (job?.company_description_raw ?? '').trim()
-  const jobDescriptionText = (job?.job_description_raw ?? '').trim()
+  const companyDescriptionText = draft.company_description_raw.trim()
+  const jobDescriptionText = draft.job_description_raw.trim()
+
+  const asMultiline = (items: string[]) => items.join('\n')
+
+  const updateKeywords = (
+    field: 'technologies' | 'skills' | 'abilities',
+    value: string
+  ) => {
+    onChangeDraft({
+      ...draft,
+      enrichment_keywords: {
+        ...draft.enrichment_keywords,
+        [field]: value
+          .split(/\n|,/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+      },
+    })
+  }
 
   const postedDate = job?.date_posted
     ? new Date(`${job.date_posted}T00:00:00`).toLocaleDateString('en-GB', {
@@ -176,10 +207,37 @@ export function JobPanel({
       {/* Discovery Keywords section */}
       {job && (
         <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs tracking-wider text-text-muted uppercase">
+              Enrichment
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-[10px]"
+              onClick={onSaveDraft}
+              disabled={!isDraftDirty || isSavingDraft}
+            >
+              {isSavingDraft ? 'Saving...' : 'Save Fields'}
+            </Button>
+          </div>
+          {saveError && (
+            <p className="text-[10px] text-status-error">{saveError}</p>
+          )}
+          {!saveError && isDraftDirty && (
+            <p className="text-[10px] text-status-warn">Unsaved edits. Save to enable rephrase.</p>
+          )}
+
           <div>
             <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
               Keywords
             </p>
+            <textarea
+              value={asMultiline(technologies)}
+              onChange={(e) => updateKeywords('technologies', e.target.value)}
+              className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary"
+              placeholder="One keyword per line or comma-separated"
+            />
             <div className="flex flex-wrap gap-1">
               {technologies.map((kw) => (
                 <KeywordTag key={`tech-${kw}`} keyword={kw} variant="required" />
@@ -192,6 +250,12 @@ export function JobPanel({
               <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
                 Skills
               </p>
+              <textarea
+                value={asMultiline(skills)}
+                onChange={(e) => updateKeywords('skills', e.target.value)}
+                className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
+                placeholder="One skill per line or comma-separated"
+              />
               <div className="flex flex-wrap gap-1">
                 {skills.map((kw) => (
                   <KeywordTag key={`skill-${kw}`} keyword={kw} variant="nice-to-have" />
@@ -205,6 +269,12 @@ export function JobPanel({
               <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
                 Abilities
               </p>
+              <textarea
+                value={asMultiline(abilities)}
+                onChange={(e) => updateKeywords('abilities', e.target.value)}
+                className="w-full min-h-16 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
+                placeholder="One ability per line or comma-separated"
+              />
               <div className="flex flex-wrap gap-1">
                 {abilities.map((kw) => (
                   <KeywordTag key={`ability-${kw}`} keyword={kw} variant="required" />
@@ -223,6 +293,17 @@ export function JobPanel({
           <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
             Company Description
           </p>
+          <textarea
+            value={draft.company_description_raw}
+            onChange={(e) =>
+              onChangeDraft({
+                ...draft,
+                company_description_raw: e.target.value,
+              })
+            }
+            className="w-full min-h-24 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
+            placeholder="Paste company description"
+          />
           <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
             {companyDescriptionText ? (
               <HighlightedDescription
@@ -244,6 +325,17 @@ export function JobPanel({
           <p className="text-xs tracking-wider text-text-muted uppercase mb-2">
             Job Description
           </p>
+          <textarea
+            value={draft.job_description_raw}
+            onChange={(e) =>
+              onChangeDraft({
+                ...draft,
+                job_description_raw: e.target.value,
+              })
+            }
+            className="w-full min-h-32 rounded border border-border-default bg-bg-elevated px-2 py-1 text-xs text-text-primary mb-2"
+            placeholder="Paste full job description"
+          />
           <div className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap">
             {jobDescriptionText ? (
               <HighlightedDescription

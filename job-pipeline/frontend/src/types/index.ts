@@ -56,11 +56,7 @@ export interface Job {
   description: string
   job_description_raw: string
   company_description_raw: string
-  enrichment_keywords: {
-    technologies: string[]
-    skills: string[]
-    abilities: string[]
-  }
+  enrichment_keywords: EnrichmentKeywords
   salary_min: number | null
   salary_max: number | null
   job_url: string
@@ -110,4 +106,21 @@ export interface RephraseRequest {
   slot_index: number
   section: Section
   subsection: string
+}
+
+export interface EnrichmentKeywords {
+  technologies: string[]
+  skills: string[]
+  abilities: string[]
+}
+
+export interface EnrichmentDraft {
+  job_description_raw: string
+  company_description_raw: string
+  enrichment_keywords: EnrichmentKeywords
+}
+
+export interface SaveEnrichmentResponse {
+  status: 'saved'
+  job: Job
 }

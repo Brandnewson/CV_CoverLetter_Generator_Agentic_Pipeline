@@ -1,15 +1,26 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { usePlan } from '@/hooks/usePlan'
 import { useQueuedJobs } from '@/hooks/useQueuedJobs'
 import { useApproveSlot, useUnapproveSlot, useRephrase, useRestoreBullet } from '@/hooks/useRephrase'
 import { useApproveCV } from '@/hooks/useApproveCV'
+import { useSaveEnrichment } from '@/hooks/useSaveEnrichment'
 import { TopBar } from '@/components/TopBar'
 import { JobPanel } from '@/components/JobPanel'
 import { BulletBuilder } from '@/components/BulletBuilder'
 import { AlternativesPanel } from '@/components/AlternativesPanel'
 import { ResizableColumns } from '@/components/ResizableColumns'
-import type { Section } from '@/types'
+import type { EnrichmentDraft, Section } from '@/types'
+
+const EMPTY_DRAFT: EnrichmentDraft = {
+  job_description_raw: '',
+  company_description_raw: '',
+  enrichment_keywords: {
+    technologies: [],
+    skills: [],
+    abilities: [],
+  },
+}
 
 export default function App() {
   const { jobId: jobIdParam } = useParams<{ jobId: string }>()
@@ -24,8 +35,34 @@ export default function App() {
   const rephrase = useRephrase(jobId ?? 0)
   const restoreBullet = useRestoreBullet(jobId ?? 0)
   const approveCV = useApproveCV(jobId ?? 0)
+  const saveEnrichment = useSaveEnrichment(jobId ?? 0)
 
   const [rephrasingSlotIndex, setRephrasingSlotIndex] = useState<number | null>(null)
+  const [draft, setDraft] = useState<EnrichmentDraft>(EMPTY_DRAFT)
+  const [savedDraft, setSavedDraft] = useState<EnrichmentDraft>(EMPTY_DRAFT)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!plan?.job) return
+    const nextDraft: EnrichmentDraft = {
+      job_description_raw: plan.job.job_description_raw ?? '',
+      company_description_raw: plan.job.company_description_raw ?? '',
+      enrichment_keywords: {
+        technologies: plan.job.enrichment_keywords?.technologies ?? [],
+        skills: plan.job.enrichment_keywords?.skills ?? [],
+        abilities: plan.job.enrichment_keywords?.abilities ?? [],
+      },
+    }
+    setDraft(nextDraft)
+    setSavedDraft(nextDraft)
+    setSaveError(null)
+  }, [plan?.job])
+
+  const isDraftDirty = useMemo(() => {
+    return JSON.stringify(draft) !== JSON.stringify(savedDraft)
+  }, [draft, savedDraft])
+
+  const canRephrase = !isDraftDirty && !saveEnrichment.isPending
 
   // Calculate accepted count
   const allSlots = plan 
@@ -44,7 +81,7 @@ export default function App() {
   }
 
   const handleRephraseSlot = async (slotIndex: number, section: Section, subsection: string) => {
-    if (!jobId) return
+    if (!jobId || !canRephrase) return
     setRephrasingSlotIndex(slotIndex)
     try {
       await rephrase.mutateAsync({
@@ -55,6 +92,17 @@ export default function App() {
       })
     } finally {
       setRephrasingSlotIndex(null)
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    if (!jobId || !isDraftDirty) return
+    try {
+      setSaveError(null)
+      await saveEnrichment.mutateAsync(draft)
+      setSavedDraft(draft)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save enrichment')
     }
   }
 
@@ -112,6 +160,12 @@ export default function App() {
             queuedJobs={queuedJobs}
             currentJobId={jobId ?? 0}
             onSelectJob={handleSelectJob}
+            draft={draft}
+            onChangeDraft={setDraft}
+            onSaveDraft={handleSaveDraft}
+            isSavingDraft={saveEnrichment.isPending}
+            isDraftDirty={isDraftDirty}
+            saveError={saveError}
           />
         }
         center={
@@ -125,6 +179,7 @@ export default function App() {
             onApproveAll={handleApproveAll}
             isRephrasing={rephrase.isPending}
             rephrasingSlotIndex={rephrasingSlotIndex}
+            canRephrase={canRephrase}
           />
         }
         right={
