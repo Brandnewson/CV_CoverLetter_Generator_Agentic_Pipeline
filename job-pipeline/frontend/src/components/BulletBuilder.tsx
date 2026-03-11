@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BulletSlot } from '@/components/BulletSlot'
-import type { CVSelectionPlan, Section, BulletSlot as BulletSlotType } from '@/types'
+import type { CVSelectionPlan, Section, BulletSlot as BulletSlotType, KeywordCoverageItem } from '@/types'
 
 interface BulletBuilderProps {
   plan: CVSelectionPlan | undefined
@@ -107,6 +107,21 @@ export function BulletBuilder({
   const acceptedCount = slotsWithCandidates.filter((s) => s.is_approved).length
   const totalSlots = slotsWithCandidates.length
 
+  // Keyword coverage stats
+  const coverageStats = useMemo(() => {
+    if (!plan?.keyword_bucket_coverage) return null
+    const allItems: KeywordCoverageItem[] = [
+      ...(plan.keyword_bucket_coverage.technologies ?? []),
+      ...(plan.keyword_bucket_coverage.skills ?? []),
+      ...(plan.keyword_bucket_coverage.abilities ?? []),
+    ]
+    if (allItems.length === 0) return null
+    const total = allItems.length
+    const hit = allItems.filter((item) => item.status === 'hit').length
+    const percent = Math.round((hit / total) * 100)
+    return { hit, total, percent }
+  }, [plan])
+
   const toggleProjectVisibility = (projectName: string) => {
     setHiddenProjects((prev) => {
       const next = new Set(prev)
@@ -136,7 +151,9 @@ export function BulletBuilder({
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-bg-base">
+    <div className="relative h-full flex flex-col">
+      {/* Scrollable content */}
+      <div className={`flex-1 overflow-y-auto bg-bg-base ${coverageStats ? 'pb-16' : ''}`}>
       {/* Sticky header */}
       <div className="sticky top-0 z-10 bg-bg-surface border-b border-border-subtle px-4 py-2 flex justify-between items-center">
         <span className="text-xs text-text-secondary">
@@ -217,6 +234,42 @@ export function BulletBuilder({
           </p>
         )}
       </div>
+      </div>{/* end scrollable content */}
+
+      {/* Floating keyword coverage bar */}
+      {coverageStats && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-3 pt-1 pointer-events-none">
+          <div className="rounded-lg border border-border-default bg-bg-surface/90 backdrop-blur-sm px-4 py-3 shadow-2xl">
+            {/* Label row */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase tracking-wider text-text-muted font-mono">
+                Keyword coverage
+              </span>
+              <span
+                className="text-[11px] font-mono font-semibold"
+                style={{ color: coverageStats.percent >= 80 ? 'var(--status-ok)' : coverageStats.percent >= 50 ? 'var(--status-warn)' : 'var(--status-error)' }}
+              >
+                {coverageStats.hit} / {coverageStats.total} &nbsp;·&nbsp; {coverageStats.percent}%
+              </span>
+            </div>
+            {/* Bar track */}
+            <div className="h-1.5 w-full rounded-full bg-bg-elevated overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-700 ease-out"
+                style={{
+                  width: `${coverageStats.percent}%`,
+                  backgroundColor:
+                    coverageStats.percent >= 80
+                      ? 'var(--status-ok)'
+                      : coverageStats.percent >= 50
+                      ? 'var(--status-warn)'
+                      : 'var(--status-error)',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

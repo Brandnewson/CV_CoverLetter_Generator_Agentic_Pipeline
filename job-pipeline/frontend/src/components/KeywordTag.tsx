@@ -11,8 +11,8 @@ interface KeywordTagProps {
 const variantStyles: Record<KeywordVariant, string> = {
   required: 'bg-accent-subtle text-accent-color border-accent-border',
   'nice-to-have': 'bg-transparent text-text-muted border-border-default',
-  hit: 'bg-accent-subtle text-accent-color border-accent-border',
-  uncovered: 'bg-transparent text-status-warn border-status-warn',
+  hit: 'bg-status-ok/10 text-status-ok border-status-ok/50',
+  uncovered: 'bg-status-error/10 text-status-error border-status-error/50',
 }
 
 export function KeywordTag({ keyword, variant, className }: KeywordTagProps) {
