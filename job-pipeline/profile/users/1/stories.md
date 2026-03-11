@@ -233,3 +233,47 @@ Whether working on Formula One development or Formula Student projects, engineer
 The AeroInsight project follows a hexagonal (ports and adapters) architecture pattern that isolates business logic from infrastructure concerns. The codebase is organised into distinct layers: domain models define the core business entities, services encapsulate the RAG pipeline logic, infrastructure handles database and API integrations, and API routes expose functionality through HTTP endpoints. This separation allows the same business logic to be consumed by multiple interfaces (REST API and MCP tool server) without modification.
 The design embraces the principle that the core RAG evaluation pipeline should not depend on how it is accessed. The rag_service.py module contains pure business logic that operates on domain objects, whilst the api/evaluations.py routes and mcp/tool_service.py adapter merely transform these domain objects into their respective protocol formats. This approach enables straightforward testing of evaluation logic in isolation and makes it trivial to add new client interfaces later.
 
+
+
+<!-- ingested 2026-03-11 21:56 UTC -->
+## Branson Tay (from upload)
+
+bransontay@gmail.com | +44 7831 399 634 | linkedin.com/in/bransontay |github.com/Brandnewson
+
+
+<!-- ingested 2026-03-11 21:56 UTC -->
+## TECHNICAL PROJECTS (from upload)
+
+Formula Student Lap Time Simulator |Python, Git, Vehicle Dynamics, Mathematical Methods
+▪ Developed quasi steady-state lap time simulator with tyre data, enabling sensitivity analysis of design parameters.
+▪ Extracted telemetry from custom sim under braking and acceleration to get metrics for FEA load analysis.
+▪
+Created powertrain, drivetrain, tyre, aero and suspension bicycle models to feed sim from first principles.
+2D CFD Formula Student Radiator Optimisation Simulator |Rust, Aerodynamics, Numerical Methods
+▪ Developed a 2D incompressible fluid solver analysing radiator angle effects on cooling, pressure drop and drag.
+▪
+Automated batch simulations and visualisations to optimise radiator design, leveraging parallel processing.
+Assetto Corsa AI driver Simulator |OpenAI Gym, Reinforcement Learning, Real-time continuous control
+▪ Utilised a PyTorch Soft Actor-Critic (SAC) pipeline for training and evaluation for vehicle model validation.
+▪
+Leveraged a human driver telemetry dataset for offline pretraining improving sample efficiency.
+Formula Student ICE Data Acquisition System|C++, Git, Arduino
+▪
+Aggregated data from GPS module to Arduino Teensy, visualising live data to the driver dash and over radio
+frequency for multiple departments to better quantify and enhance vehicle performance.
+▪ Honed proficiency in collaborative software engineering tools like Git and conducting code reviews.
+Formula Student EV Battery Management System|C++, CAN Bus protocol
+▪
+Architected a BMS expansion module using the CAN bus protocol for robust and efficient data transfer.
+▪
+Designed microprocessor framework to process battery module voltages to tangible data in C++.
+
+
+<!-- ingested 2026-03-11 21:56 UTC -->
+## HOBBIES & PERSONAL INTERESTS (from upload)
+
+▪
+Engineering: Avid viewer of motorsport and airplane engineering videos|Sim Racing|Karting
+▪ Stress-relieving: Padel|Table-tennis|Badminton|Cooking|Painting|Running
+▪
+Enriching: Reading fiction & non-fiction books|Podcasts & videos on behavioural science

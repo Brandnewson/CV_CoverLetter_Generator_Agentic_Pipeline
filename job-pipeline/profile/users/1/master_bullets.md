@@ -1,5 +1,17 @@
 # Master Bullet Bank
 
+
+### TECHNICAL PROJECTS
+
+- Created powertrain, drivetrain, tyre, aero and suspension bicycle models to feed sim from first principles.
+    [tags: general]
+    [role_family: general-swe]
+
+### TECHNICAL PROJECTS
+
+- Architected a BMS expansion module using the CAN bus protocol for robust and efficient data transfer.
+    [tags: general]
+    [role_family: general-swe]
 ## Work Experience
 
 ### Jaguar TCS Racing
@@ -146,6 +158,22 @@
     [tags: frontend, ux, product]
     [role_family: general-swe]
 
+
+### WORK EXPERIENCE
+
+- Led cross-team war-time firefighting simulation aboard ship engine operations room to assign appropriate fixes.
+    [tags: general]
+    [role_family: general-swe]
+
+- Analysed live sensor data in core ship systems from telemetry displays under high-pressure situations.
+    [tags: general]
+    [role_family: general-swe]
+
+### ADDITIONAL EXPERIENCE
+
+- Developed and marketed multiple e-commerce shop brands by creating catchy, attention-grabbing creatives.
+    [tags: general]
+    [role_family: general-swe]
 ## Technical Projects
 
 ### Formula Student Lap Time Simulator

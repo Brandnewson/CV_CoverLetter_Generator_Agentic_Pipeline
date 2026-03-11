@@ -169,3 +169,68 @@ export interface DragBulletPayload {
   source: BulletSource
   keywords_targeted: string[]
 }
+
+// ─── Onboarding / Preferences ────────────────────────────────────────────────
+
+export interface UserPreferences {
+  search_terms: string[]
+  role_families: string[]
+  location: string
+  country_indeed: string
+  results_wanted: number
+  hours_old: number
+  salary_floor: number
+  currency: string
+  excluded_title_keywords: string[]
+  excluded_desc_keywords: string[]
+}
+
+// ─── Profile uploads ──────────────────────────────────────────────────────────
+
+export type UploadType = 'cv' | 'cover_letter' | 'story' | 'project_context'
+
+export interface UploadedFile {
+  filename: string
+  size_bytes: number
+  modified_at: string
+}
+
+export interface ProfileUploads {
+  cv: UploadedFile[]
+  cover_letter: UploadedFile[]
+  story: UploadedFile[]
+  project_context: UploadedFile[]
+}
+
+// ─── CV section parsing ───────────────────────────────────────────────────────
+
+export type SectionType =
+  | 'work_experience'
+  | 'technical_projects'
+  | 'education'
+  | 'skills'
+  | 'summary'
+  | 'cover_letter'
+  | 'other'
+
+export interface RawSection {
+  heading: string
+  raw_text: string
+  detected_type: SectionType
+  confidence: number   // 0.0–1.0
+  warnings: string[]
+}
+
+export interface ParseResult {
+  sections: RawSection[]
+}
+
+export interface ConfirmedSection {
+  heading: string
+  raw_text: string
+  confirmed_type: SectionType
+}
+
+export interface ConfirmResult {
+  updated_files: Record<string, string[]>
+}

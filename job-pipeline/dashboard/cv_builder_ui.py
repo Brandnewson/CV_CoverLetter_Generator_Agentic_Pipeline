@@ -6,19 +6,25 @@ from pathlib import Path
 
 import anthropic
 import psycopg2
+import yaml
 from psycopg2.extras import Json
 from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
 from flask_cors import CORS
+from pydantic import BaseModel, Field
+from werkzeug.utils import secure_filename
 
 from agent.bullet_rephraser import rephrase_bullet
 from agent.bullet_selector import build_selection_plan, load_bullet_bank
 from agent.bullet_suggester import generate_suggestions_for_section
+from agent.cv_parser import extract_sections, sections_to_json
 from agent.cv_renderer import render_cv
 from agent.jd_parser import classify_role_family, classify_seniority
+from agent.profile_condenser import condense_confirmed_sections
 from agent.story_drafter import approve_bullet_for_bank
 from agent.template_extractor import load_template_map
 from agent.validators import UserSelections
+from discovery.config_writer import read_config_yaml, write_config_yaml
 from discovery.enrichment import (
     normalize_company_description_text,
     normalize_job_description_markdown,
@@ -46,6 +52,28 @@ def parse_bool_env(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def unique_destination_path(dest_dir: Path, filename: str) -> Path:
+    """Return a non-colliding path for filename inside dest_dir.
+
+    If `filename` already exists, append " (N)" before extension.
+    Examples:
+      cv.pdf -> cv (1).pdf -> cv (2).pdf
+    """
+    candidate = dest_dir / filename
+    if not candidate.exists():
+        return candidate
+
+    base = Path(filename).stem
+    suffix = Path(filename).suffix
+    index = 1
+    while True:
+        next_name = f"{base} ({index}){suffix}"
+        candidate = dest_dir / next_name
+        if not candidate.exists():
+            return candidate
+        index += 1
 
 
 # Keep job status as queued after render so same job_id can be rerun in testing.
@@ -81,6 +109,28 @@ EXPERIENCE_PATH = resolve_profile_asset([
     USER_PROFILE_DIR / "experience.md",
     PROFILE_DIR / "experience.md",
 ])
+
+# Profile upload directories (created on demand)
+UPLOADS_DIR = USER_PROFILE_DIR / "uploads"
+COVER_LETTERS_DIR = USER_PROFILE_DIR / "cover_letters"
+LOG_PATH = BASE_DIR / "logs" / "api_usage.jsonl"
+DISCOVERY_CONFIG_PATH = BASE_DIR / "discovery" / "config.yaml"
+
+_ALLOWED_UPLOAD_TYPES = {"cv", "cover_letter", "story", "project_context"}
+_ALLOWED_EXTENSIONS = {".docx", ".pdf", ".md", ".txt"}
+
+
+class PreferencesModel(BaseModel):
+    search_terms: list[str] = Field(default_factory=list)
+    role_families: list[str] = Field(default_factory=list)
+    location: str = "London, UK"
+    country_indeed: str = "UK"
+    results_wanted: int = 30
+    hours_old: int = 25
+    salary_floor: int = 40000
+    currency: str = "GBP"
+    excluded_title_keywords: list[str] = Field(default_factory=list)
+    excluded_desc_keywords: list[str] = Field(default_factory=list)
 
 
 def get_db_connection():
@@ -640,6 +690,242 @@ def add_to_bank():
             return jsonify({"status": "added", "text": bullet_text})
         else:
             return jsonify({"status": "duplicate", "text": bullet_text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Job search preferences
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.route("/api/preferences", methods=["GET"])
+def get_preferences():
+    """Return the current job search preferences.
+
+    Falls back to parsing discovery/config.yaml if no DB row exists yet.
+    """
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT search_terms, role_families, location, country_indeed, "
+                "results_wanted, hours_old, salary_floor, currency, "
+                "excluded_title_keywords, excluded_desc_keywords "
+                "FROM user_preferences WHERE user_id = %s",
+                (DEFAULT_USER_ID,),
+            )
+            row = cur.fetchone()
+        conn.close()
+
+        if row:
+            return jsonify({
+                "search_terms": row[0] or [],
+                "role_families": row[1] or [],
+                "location": row[2],
+                "country_indeed": row[3],
+                "results_wanted": row[4],
+                "hours_old": row[5],
+                "salary_floor": row[6],
+                "currency": row[7],
+                "excluded_title_keywords": row[8] or [],
+                "excluded_desc_keywords": row[9] or [],
+            })
+
+        # No DB row yet — fall back to config.yaml
+        prefs = read_config_yaml(DISCOVERY_CONFIG_PATH)
+        return jsonify(prefs)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/preferences", methods=["POST"])
+def save_preferences():
+    """Upsert user preferences to DB and regenerate discovery/config.yaml."""
+    try:
+        prefs = PreferencesModel.model_validate(request.json or {})
+        data = prefs.model_dump()
+
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            # Ensure users row exists
+            cur.execute(
+                "INSERT INTO users (id) VALUES (%s) ON CONFLICT (id) DO NOTHING",
+                (DEFAULT_USER_ID,),
+            )
+            cur.execute(
+                """
+                INSERT INTO user_preferences (
+                    user_id, search_terms, role_families, location, country_indeed,
+                    results_wanted, hours_old, salary_floor, currency,
+                    excluded_title_keywords, excluded_desc_keywords, updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                )
+                ON CONFLICT (user_id) DO UPDATE SET
+                    search_terms             = EXCLUDED.search_terms,
+                    role_families            = EXCLUDED.role_families,
+                    location                 = EXCLUDED.location,
+                    country_indeed           = EXCLUDED.country_indeed,
+                    results_wanted           = EXCLUDED.results_wanted,
+                    hours_old                = EXCLUDED.hours_old,
+                    salary_floor             = EXCLUDED.salary_floor,
+                    currency                 = EXCLUDED.currency,
+                    excluded_title_keywords  = EXCLUDED.excluded_title_keywords,
+                    excluded_desc_keywords   = EXCLUDED.excluded_desc_keywords,
+                    updated_at               = NOW()
+                """,
+                (
+                    DEFAULT_USER_ID,
+                    Json(data["search_terms"]),
+                    Json(data["role_families"]),
+                    data["location"],
+                    data["country_indeed"],
+                    data["results_wanted"],
+                    data["hours_old"],
+                    data["salary_floor"],
+                    data["currency"],
+                    Json(data["excluded_title_keywords"]),
+                    Json(data["excluded_desc_keywords"]),
+                ),
+            )
+        conn.commit()
+        conn.close()
+
+        # Regenerate config.yaml from the saved row
+        write_config_yaml(data, DISCOVERY_CONFIG_PATH)
+
+        return jsonify({"status": "saved"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Profile document uploads
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.route("/api/profile/uploads", methods=["GET"])
+def list_profile_uploads():
+    """Return all uploaded documents grouped by upload_type."""
+    result: dict[str, list[dict]] = {t: [] for t in _ALLOWED_UPLOAD_TYPES}
+    for upload_type in _ALLOWED_UPLOAD_TYPES:
+        type_dir = UPLOADS_DIR / upload_type
+        if not type_dir.exists():
+            continue
+        for f in sorted(type_dir.iterdir()):
+            if f.is_file():
+                result[upload_type].append({
+                    "filename": f.name,
+                    "size_bytes": f.stat().st_size,
+                    "modified_at": datetime.fromtimestamp(
+                        f.stat().st_mtime, tz=timezone.utc
+                    ).isoformat(),
+                })
+    return jsonify(result)
+
+
+@app.route("/api/profile/upload", methods=["POST"])
+def upload_profile_file():
+    """Accept a file upload and save to profile/users/<id>/uploads/<type>/."""
+    upload_type = request.form.get("upload_type", "")
+    if upload_type not in _ALLOWED_UPLOAD_TYPES:
+        return jsonify({"error": f"upload_type must be one of {sorted(_ALLOWED_UPLOAD_TYPES)}"}), 400
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file part in request"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"error": "Empty filename"}), 400
+
+    filename = secure_filename(file.filename)
+    suffix = Path(filename).suffix.lower()
+    if suffix not in _ALLOWED_EXTENSIONS:
+        return jsonify({"error": f"Unsupported file type {suffix!r}"}), 400
+
+    dest_dir = UPLOADS_DIR / upload_type
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = unique_destination_path(dest_dir, filename)
+    file.save(str(dest))
+
+    return jsonify({
+        "status": "uploaded",
+        "filename": dest.name,
+        "upload_type": upload_type,
+        "size_bytes": dest.stat().st_size,
+    })
+
+
+@app.route("/api/profile/uploads/<upload_type>/<filename>", methods=["DELETE"])
+def delete_profile_upload(upload_type: str, filename: str):
+    """Remove a previously uploaded file."""
+    if upload_type not in _ALLOWED_UPLOAD_TYPES:
+        return jsonify({"error": "Invalid upload_type"}), 400
+    safe = secure_filename(filename)
+    path = UPLOADS_DIR / upload_type / safe
+    if not path.exists():
+        return jsonify({"error": "File not found"}), 404
+    path.unlink()
+    return jsonify({"status": "deleted", "filename": safe})
+
+
+@app.route("/api/profile/parse", methods=["POST"])
+def parse_profile_upload():
+    """Run heuristic section detection on a previously uploaded file.
+
+    Body: {"filename": "cv.docx", "upload_type": "cv"}
+    Returns: list of RawSection dicts for the UI reviewer.
+    """
+    try:
+        data = request.json or {}
+        filename = secure_filename(data.get("filename", ""))
+        upload_type = data.get("upload_type", "cv")
+
+        if not filename:
+            return jsonify({"error": "filename is required"}), 400
+
+        file_path = UPLOADS_DIR / upload_type / filename
+        if not file_path.exists():
+            return jsonify({"error": f"File not found: {filename}"}), 404
+
+        sections = extract_sections(file_path)
+        return jsonify({"sections": sections_to_json(sections)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/profile/confirm", methods=["POST"])
+def confirm_profile_sections():
+    """Condense confirmed sections into the profile markdown files.
+
+    Body:
+        {
+            "sections": [{"heading", "raw_text", "confirmed_type"}, ...],
+            "source_filename": "my_cv.docx"
+        }
+    Returns: {"updated_files": {"experience.md": ["..."], ...}}
+    """
+    try:
+        data = request.json or {}
+        sections = data.get("sections", [])
+        source_filename = data.get("source_filename", "upload")
+
+        if not sections:
+            return jsonify({"error": "sections list is empty"}), 400
+
+        client = anthropic.Anthropic()
+        updated = condense_confirmed_sections(
+            sections=sections,
+            source_filename=source_filename,
+            experience_path=EXPERIENCE_PATH,
+            stories_path=STORIES_PATH,
+            bullet_bank_path=BULLET_BANK_PATH,
+            cover_letters_dir=COVER_LETTERS_DIR,
+            log_path=LOG_PATH,
+            client=client,
+            user_id=DEFAULT_USER_ID,
+        )
+        active_suggestions.clear()
+        return jsonify({"updated_files": updated})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
