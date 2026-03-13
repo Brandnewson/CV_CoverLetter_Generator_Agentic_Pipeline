@@ -152,6 +152,7 @@ export interface SuggestedSubsection {
   existing_slot_count: number
   target_suggestion_count: number
   suggestions: SuggestedBullet[]
+  existing_matches?: SuggestedBullet[]
 }
 
 export interface SuggestionsResponse {
@@ -168,6 +169,20 @@ export interface DragBulletPayload {
   text: string
   source: BulletSource
   keywords_targeted: string[]
+}
+
+export interface UserBulletInput {
+  text: string
+  section: Section
+  subsection: string
+}
+
+export interface SavedUserBullet extends BulletCandidate {
+  was_new: boolean
+}
+
+export interface AddBulletsResponse {
+  saved: SavedUserBullet[]
 }
 
 // ─── Onboarding / Preferences ────────────────────────────────────────────────

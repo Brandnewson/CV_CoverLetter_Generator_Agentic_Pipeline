@@ -228,6 +228,7 @@ class UserSelections(BaseModel):
     user_id: int = 1
     approved_bullets: List[dict]    # [{slot_index, section, subsection, text, source, rephrase_generation}]
     hidden_projects: List[str]
+    header_swaps: List[dict] = []   # [{section, subsection, header_xpath_index, text}]
     session_timestamp: str
 
 

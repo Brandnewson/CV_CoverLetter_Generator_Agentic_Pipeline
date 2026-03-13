@@ -12,6 +12,114 @@
 - Architected a BMS expansion module using the CAN bus protocol for robust and efficient data transfer.
     [tags: general]
     [role_family: general-swe]
+
+### Automatic CV builder
+
+- ship production features to existing trackside web apps, understanding engineer UI/UX, and getting immediate feedback while they are trackside
+    [tags: ship production features]
+    [role_family: general-swe]
+
+### Automatic CV builder
+
+- Implemented webhook integrations for web apps that describe critical data. both for persistent and event-driven architecture.
+    [tags: general]
+    [role_family: general-swe]
+
+### Wing Aerodynamic Analyser API (FastAPI Coursework)  FastAPI REST API for F1 front-wing aerodynamic design iteration using RAG and dual-database architecture.
+
+- Ingested UIUC airfoil dataset and aerodynamic reference papers as embedded knowledge, providing grounded semantic similarity for wing configuration retrieval.
+    [tags: general]
+    [role_family: general-swe]
+
+### Wing Aerodynamic Analyser API (FastAPI Coursework)  FastAPI REST API for F1 front-wing aerodynamic design iteration using RAG and dual-database architecture.
+
+- Applied clean architecture principles with domain-separated layers (api/, domain/, infrastructure/, services/), Pydantic schema validation, and full test coverage — demonstrating production software engineering standards.
+    [tags: general]
+    [role_family: general-swe]
+
+### Wing Aerodynamic Analyser API (FastAPI Coursework)  FastAPI REST API for F1 front-wing aerodynamic design iteration using RAG and dual-database architecture.
+
+- Exposed the RAG engine as Model Context Protocol (MCP) tools, making the aero knowledge base accessible to any MCP-compatible AI client.
+    [tags: general]
+    [role_family: general-swe]
+
+### Wing Aerodynamic Analyser API (FastAPI Coursework)  FastAPI REST API for F1 front-wing aerodynamic design iteration using RAG and dual-database architecture.
+
+- Built a FastAPI REST API for aerodynamic design iteration, combining ChromaDB vector search over aero papers/CFD datasets with SQLite configuration management, enabling a Search → Save → Compare → Refine workflow for wing analysis.
+    [tags: general]
+    [role_family: general-swe]
+
+### F1 Race Strategy Simulator (Final Year Project)  Multi-agent reinforcement learning system for F1 race strategy with Claude-powered autoresearch.
+
+- Implemented epsilon-decay scheduling, gradient clipping, and experience-replay tuning through iterative automated experimentation, producing multiple trained model checkpoints (.pth) for comparative analysis.
+    [tags: general]
+    [role_family: general-swe]
+
+### F1 Race Strategy Simulator (Final Year Project)  Multi-agent reinforcement learning system for F1 race strategy with Claude-powered autoresearch.
+
+- Integrated fastF1 library to extract historical F1 overtake and position data, grounding the stochastic simulator in real race telemetry patterns.
+    [tags: general]
+    [role_family: general-swe]
+
+### F1 Race Strategy Simulator (Final Year Project)  Multi-agent reinforcement learning system for F1 race strategy with Claude-powered autoresearch.
+
+- Built an autoresearch system (autoresearch_agent.py) that calls the Claude Opus API every 5 minutes to suggest DQN hyperparameter tweaks, auto-applies file diffs, evaluates agent win-rate against a baseline (50-run CI-95 metric), and git-commits all changes for reproducibility.
+    [tags: general]
+    [role_family: general-swe]
+
+### F1 Race Strategy Simulator (Final Year Project)  Multi-agent reinforcement learning system for F1 race strategy with Claude-powered autoresearch.
+
+- Designed and implemented a stochastic F1 race environment with multi-agent DQN (Deep Q-Network) reinforcement learning, investigating on-policy/off-policy algorithm convergence under competitive, randomised race condition
+    [tags: general]
+    [role_family: general-swe]
+
+### Aerodynamic Concept Analyser (RAG)  AI-powered evaluation of aerodynamic concepts backed by 248 arXiv research papers.
+
+- Architected using domain-separated databases: ChromaDB for fuzzy semantic search over aero literature, SQLite for transactional concept/evaluation storage — clean separation of concerns for high-performance data retrieval.
+    [tags: general]
+    [role_family: general-swe]
+
+### Aerodynamic Concept Analyser (RAG)  AI-powered evaluation of aerodynamic concepts backed by 248 arXiv research papers.
+
+- Implemented a Model Context Protocol (MCP) server exposing the RAG engine as a tool-accessible service, demonstrating MCP integration patterns used in modern AI infrastructure.
+    [tags: general]
+    [role_family: general-swe]
+
+### Aerodynamic Concept Analyser (RAG)  AI-powered evaluation of aerodynamic concepts backed by 248 arXiv research papers.
+
+- Developed a FastAPI + React full-stack application with structured LLM outputs via GPT-4o, returning novelty scores, confidence ratings, mechanism analysis, and paper citations — delivering aero intelligence directly relevant to CFD software engineering roles.
+    [tags: react]
+    [role_family: general-swe]
+
+### Aerodynamic Concept Analyser (RAG)  AI-powered evaluation of aerodynamic concepts backed by 248 arXiv research papers.
+
+- Built a Retrieval-Augmented Generation (RAG) system ingesting 248 arXiv aerodynamics papers (31,652 vector chunks) into ChromaDB, enabling semantic novelty scoring and regulatory-flag detection for aerodynamic concepts.
+    [tags: general]
+    [role_family: general-swe]
+
+### Intelligent CV & Job Application Pipeline  Agentic job-discovery and CV-tailoring system powered by LLMs with a full-stack web UI.
+
+- Integrated OpenAI scoring for job-fit ranking and Azure Blob Storage for asset management, demonstrating cloud-native deployment patterns applicable to F1 data infrastructure.
+    [tags: general]
+    [role_family: general-swe]
+
+### Intelligent CV & Job Application Pipeline  Agentic job-discovery and CV-tailoring system powered by LLMs with a full-stack web UI.
+
+- Implemented 18+ unit and integration tests across all agent modules (bullet_rephraser, bullet_selector, profile_condenser, story_drafter, style_updater), achieving end-to-end smoke test coverage from JD intake to DOCX download.
+    [tags: general]
+    [role_family: general-swe]
+
+### Intelligent CV & Job Application Pipeline  Agentic job-discovery and CV-tailoring system powered by LLMs with a full-stack web UI.
+
+- Designed a dual-pipeline system (discovery + CV builder) with a Flask API backend, React/TypeScript/Vite frontend, and PostgreSQL database, enabling real-time CV assembly through a three-panel web UI.
+    [tags: typescript, react]
+    [role_family: general-swe]
+
+### Intelligent CV & Job Application Pipeline  Agentic job-discovery and CV-tailoring system powered by LLMs with a full-stack web UI.
+
+- Built a full-stack agentic CV generation pipeline using Python and the Anthropic Claude API, automating job discovery, keyword extraction, and tailored DOCX CV creation across a multi-agent architecture (jd_parser → bullet_selector → bullet_rephraser → cv_renderer).
+    [tags: general]
+    [role_family: general-swe]
 ## Work Experience
 
 ### Jaguar TCS Racing
@@ -118,6 +226,38 @@
 - Validated battery thermal models against track and simulator datasets for accurate race temperature forecasting.
     [tags: general]
     [role_family: ai-startup]
+
+- Architectured system design for python data pipeline, calculating tradeoffs and requirements, and deciding what the best technical architecture was given resource and user constraints
+    [tags: system design, technical architecture]
+    [role_family: general-swe]
+
+- Created data pipeline taking end-to-end ownership,  allowing for raw race data to be transformed into usable, visualisied data in our data visualisation tools
+    [tags: end-to-end ownership]
+    [role_family: general-swe]
+
+- Optimised GPS position data using KD-tree algorithms to enable tow-effect analysis; built Strategy_PitStopAnalysisV2 and RESS_Modelling scripts (MATLAB/Python) that remain in active use within the Jaguar TCS Racing simulation toolset.
+    [tags: general]
+    [role_family: general-swe]
+
+- Performed competitor radio analysis across energy management, pit stops, tyre strategy, battery, and vehicle setup, delivering concise per-session reports to the race strategy team under live race conditions.
+    [tags: general]
+    [role_family: general-swe]
+
+- Extended machine learning tooling with CNNs and OpenCV to automate competitor video analysis (onboard/dash footage), reducing manual analyst workload and enabling engineers to focus on performance-critical tasks.
+    [tags: general]
+    [role_family: general-swe]
+
+- Developed MATLAB tyre temperature and energy modelling tools for RESS (battery) simulation, validating friction-brake energy calculations against race telemetry to inform real-time strategy decisions — contributing to a P2 hold at Formula E Shanghai Race 2 and a race win.
+    [tags: general]
+    [role_family: general-swe]
+
+- Built Atlas_BT, a custom ATLAS reader/writer library adopted as a dependency by 4+ Data Science tools across the Vehicle Performance Group's strategy, simulation, and software teams, demonstrating ability to deliver long-term maintainable shared infrastructure.
+    [tags: general]
+    [role_family: general-swe]
+
+- Developed and deployed AKS_Timing_Feed_Service, a trackside Python application running on race-weekend servers via CI/CD pipelines, converting real-time FIA timing feed data into ATLAS telemetry channels
+    [tags: general]
+    [role_family: general-swe]
 ### Republic of Singapore Navy
 
 - Trained on Singapore Navy's largest marine vessel, on maintenance and wartime awareness of ship systems.
@@ -190,6 +330,22 @@
     [tags: simulation, vehicle-dynamics, motorsport, modelling]
     [role_family: motorsport]
 
+
+- Structured the simulator with domain-separated modules (simulator/, track/, vehicle/) and JSON configuration files, making it maintainable and extensible for future FS25/26 car variants.
+    [tags: general]
+    [role_family: general-swe]
+
+- Contributed across 13+ merged pull requests in a collaborative team repository (LGRSimulations/LGR_FullTrackQSLapTimeSim), including uv package management migration, longitudinal force forward-pass physics, and dataset pipeline improvements.
+    [tags: general]
+    [role_family: general-swe]
+
+- Implemented a parameter sweep module (sweep.py) that runs the simulator across a configurable range of vehicle parameters and generates comparative output data, enabling data-driven design optimisation — mirroring Vehicle Performance data engineering workflows at Cadillac F1 and Mercedes AMG.
+    [tags: general]
+    [role_family: general-swe]
+
+- Developed a quasi-static lap time simulator from scratch for the Leeds Gryphon Racing Formula Student car, modelling full vehicle dynamics (tyre, powertrain, drivetrain, lateral/yaw balance) segment-by-segment to produce speed profiles and validate design decisions.
+    [tags: general]
+    [role_family: general-swe]
 ### Radiator Thermal Management Simulator
 - Constructed radiator size optimiser to correlate real-world and simulator thermal impact on the coolant system.
     [tags: simulation, optimization, motorsport, modelling]
@@ -204,6 +360,22 @@
     [tags: simulation, optimization, python, motorsport, modelling]
     [role_family: motorsport]
 
+
+- Chose Rust for performance-critical simulation code, demonstrating language versatility beyond Python and readiness for systems-level engineering challenges in motorsport infrastructure.
+    [tags: general]
+    [role_family: general-swe]
+
+- Built batch angle-sweep analysis for radiator optimisation, computing mass flow rate, pressure drop, drag/lift forces, and fan power requirements across configurable angles — directly addressing Formula Student cooling vs drag trade-offs.
+    [tags: general]
+    [role_family: general-swe]
+
+- Achieved a 15–25x performance improvement through grid resolution optimisation (250×250 → 150×150, 64% fewer cells), solver iteration reduction with early-convergence detection, and minimal I/O mode — demonstrating systematic performance engineering.
+    [tags: general]
+    [role_family: general-swe]
+
+- Implemented a 2D incompressible Navier-Stokes CFD solver in Rust using the projection method with Gauss-Seidel iteration on a staggered MAC grid, providing real-time pressure/velocity field visualisation and streamline rendering.
+    [tags: general]
+    [role_family: general-swe]
 ### Formula Student ICE Data Acquisition System
 - Built a real-time GPS telemetry pipeline from Arduino Teensy to dashboard and wireless engineering displays.
     [tags: telemetry, embedded, hardware, motorsport, software]

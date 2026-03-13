@@ -197,13 +197,13 @@ export default function App() {
                 {saveEnrichment.isPending ? 'Confirming job details…' : 'Confirm job details to continue'}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-                Review the job description, company description, and keyword fields in the left panel first. When they look correct, confirm the job details to unlock rephrasing and bullet selection.
+                Review the job description, company description, and keyword fields in the left panel first. When they look correct, confirm the job details to unlock bullet intake and CV refresh.
               </p>
             </>
           ) : undefined
         }
         initialLeftWidth={280}
-        initialRightWidth={340}
+        initialRightWidth={420}
         minLeftWidth={200}
         minRightWidth={220}
         minCenterWidth={480}
@@ -242,6 +242,8 @@ export default function App() {
         }
         right={
           <AlternativesPanel
+            plan={plan}
+            jobId={jobId ?? 0}
             isUnlocked={canRephrase}
             suggestions={suggestions.data}
             isLoading={suggestions.isLoading}

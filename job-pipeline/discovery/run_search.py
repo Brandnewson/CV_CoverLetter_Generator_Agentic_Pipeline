@@ -221,7 +221,20 @@ def insert_jobs(jobs: list[dict], conn, search_term: str) -> tuple[int, int]:
                         date_posted, search_term
                     )
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id
+                    ON CONFLICT (source, external_id) DO UPDATE SET
+                        description = CASE
+                            WHEN EXCLUDED.description != '' THEN EXCLUDED.description
+                            ELSE jobs.description
+                        END,
+                        job_description_raw = CASE
+                            WHEN EXCLUDED.job_description_raw != '' THEN EXCLUDED.job_description_raw
+                            ELSE jobs.job_description_raw
+                        END,
+                        company_description_raw = COALESCE(NULLIF(EXCLUDED.company_description_raw, ''), jobs.company_description_raw),
+                        title = EXCLUDED.title,
+                        location = EXCLUDED.location,
+                        job_url = EXCLUDED.job_url
+                    RETURNING id, (xmax = 0) AS inserted
                 """, (
                     job["source"],
                     job["external_id"],
@@ -241,36 +254,40 @@ def insert_jobs(jobs: list[dict], conn, search_term: str) -> tuple[int, int]:
                 ))
                 result = cur.fetchone()
                 if result:
-                    inserted_job_id = result[0]
-                    # Also create a job_status entry for the new job
-                    cur.execute("""
-                        INSERT INTO job_status (job_id, status)
-                        VALUES (%s, 'new')
-                        ON CONFLICT (job_id) DO NOTHING
-                    """, (inserted_job_id,))
+                    inserted_job_id, is_new_row = result[0], result[1]
+                    # job_status only for new rows
+                    if is_new_row:
+                        cur.execute("""
+                            INSERT INTO job_status (job_id, status)
+                            VALUES (%s, 'new')
+                            ON CONFLICT (job_id) DO NOTHING
+                        """, (inserted_job_id,))
 
-                    # Enrich and persist discovery-time keywords once per inserted job.
-                    enrichment = build_enrichment(job["job_description_raw"])
-                    cur.execute(
-                        """
-                        UPDATE jobs
-                        SET enrichment_keywords = %s,
-                            enrichment_version = %s,
-                            enriched_at = %s
-                        WHERE id = %s
-                        """,
-                        (
-                            psycopg2.extras.Json({
-                                "technologies": enrichment["technologies"],
-                                "skills": enrichment["skills"],
-                                "abilities": enrichment["abilities"],
-                            }),
-                            enrichment["version"],
-                            datetime.fromisoformat(enrichment["enriched_at"]),
-                            inserted_job_id,
-                        ),
-                    )
-                    new_inserted += 1
+                    # Enrich whenever a description is present (new row or newly-filled description)
+                    desc = job["job_description_raw"] or ""
+                    if desc:
+                        enrichment = build_enrichment(desc)
+                        cur.execute(
+                            """
+                            UPDATE jobs
+                            SET enrichment_keywords = %s,
+                                enrichment_version = %s,
+                                enriched_at = %s
+                            WHERE id = %s
+                            """,
+                            (
+                                psycopg2.extras.Json({
+                                    "technologies": enrichment["technologies"],
+                                    "skills": enrichment["skills"],
+                                    "abilities": enrichment["abilities"],
+                                }),
+                                enrichment["version"],
+                                datetime.fromisoformat(enrichment["enriched_at"]),
+                                inserted_job_id,
+                            ),
+                        )
+                    if is_new_row:
+                        new_inserted += 1
             except Exception as e:
                 cur.execute("ROLLBACK TO SAVEPOINT job_insert")
                 print(f"Error inserting job '{job.get('title', 'unknown')}': {e}")

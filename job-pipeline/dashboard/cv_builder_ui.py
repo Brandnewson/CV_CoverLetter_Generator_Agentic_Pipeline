@@ -19,7 +19,7 @@ from agent.bullet_selector import build_selection_plan, load_bullet_bank
 from agent.bullet_suggester import generate_suggestions_for_section
 from agent.cv_parser import extract_sections, sections_to_json
 from agent.cv_renderer import render_cv
-from agent.jd_parser import classify_role_family, classify_seniority
+from agent.jd_parser import classify_role_family, classify_seniority, score_bullet_against_keywords
 from agent.profile_condenser import condense_confirmed_sections
 from agent.story_drafter import approve_bullet_for_bank
 from agent.template_extractor import load_template_map
@@ -332,6 +332,67 @@ def build_slots_map_by_subsection(slots) -> dict[str, list[str]]:
     return grouped
 
 
+def add_existing_bank_matches_to_suggestions(
+    section_key: str,
+    section_suggestions: list[dict],
+    section_slots,
+    bullet_bank: list[dict],
+    keywords: dict,
+) -> list[dict]:
+    """Attach top-scoring existing bullet-bank matches per subsection.
+
+    These are bullets already in the bank that are not currently placed in the slot set.
+    """
+    current_by_subsection: dict[str, set[str]] = {}
+    for slot in section_slots:
+        current_by_subsection.setdefault(slot.subsection, set())
+        if slot.current_candidate:
+            current_by_subsection[slot.subsection].add(slot.current_candidate.text.strip().lower())
+
+    for subsection_entry in section_suggestions:
+        subsection_name = subsection_entry.get("subsection", "")
+        current_texts = current_by_subsection.get(subsection_name, set())
+
+        matching_bank = [
+            bullet for bullet in bullet_bank
+            if bullet.get("section") == section_key and bullet.get("subsection") == subsection_name
+        ]
+
+        scored = []
+        for bullet in matching_bank:
+            text = (bullet.get("text") or "").strip()
+            if not text:
+                continue
+            if text.lower() in current_texts:
+                continue
+            score, hits = score_bullet_against_keywords(text, keywords)
+            scored.append((score, text, hits))
+
+        scored.sort(key=lambda row: row[0], reverse=True)
+        
+        # Use a balanced quality gate: show all above 0.10, fill to minimum if fewer
+        existing_matches = []
+        above_threshold = []
+        for score, text, hits in scored:
+            if score >= 0.10:
+                above_threshold.append((score, text, hits))
+        
+        # Use all above threshold, up to 5
+        for score, text, hits in above_threshold[:5]:
+            existing_matches.append({
+                "text": text,
+                "keywords_targeted": hits,
+                "char_count": len(text),
+                "over_soft_limit": len(text) > 110,
+                "over_hard_limit": len(text) > 120,
+                "warnings": [],
+            })
+
+        subsection_entry["existing_matches"] = existing_matches
+
+    return section_suggestions
+
+
 @app.route("/")
 def index():
     """Redirect to the latest queued job."""
@@ -487,15 +548,49 @@ def get_suggestions(job_id: int):
             client=client,
             user_id=plan.user_id,
         )
-        project_suggestions = generate_suggestions_for_section(
-            section="technical_projects",
-            slots_by_subsection=project_slots_map,
-            uncovered_keywords=uncovered_keywords,
-            required_keywords=required_keywords,
-            stories_path=STORIES_PATH,
-            profile_context=profile_context,
-            client=client,
-            user_id=plan.user_id,
+
+        # Technical projects: skip LLM generation entirely to avoid hallucinations.
+        # Instead build empty stubs from the plan slots so bank matches can be
+        # attached by add_existing_bank_matches_to_suggestions below.
+        bullet_bank = load_bullet_bank(BULLET_BANK_PATH)
+
+        # Collect subsections already in the plan
+        plan_project_subsections: dict[str, list[str]] = {}
+        for slot in plan.technical_project_slots:
+            plan_project_subsections.setdefault(slot.subsection, [])
+            if slot.current_candidate:
+                plan_project_subsections[slot.subsection].append(slot.current_candidate.text)
+
+        # Also include any new subsections the user has added to the bank but
+        # that aren't in the plan yet (new projects created via the right panel)
+        for bullet in bullet_bank:
+            if bullet.get("section") == "technical_projects":
+                sub = bullet.get("subsection", "")
+                if sub and sub not in plan_project_subsections:
+                    plan_project_subsections[sub] = []
+
+        project_suggestions = [
+            {
+                "subsection": sub,
+                "suggestions": [],
+                "target_suggestion_count": 3,
+                "existing_bullets": existing,
+            }
+            for sub, existing in plan_project_subsections.items()
+        ]
+        work_suggestions = add_existing_bank_matches_to_suggestions(
+            section_key="work_experience",
+            section_suggestions=work_suggestions,
+            section_slots=plan.work_experience_slots,
+            bullet_bank=bullet_bank,
+            keywords=keywords,
+        )
+        project_suggestions = add_existing_bank_matches_to_suggestions(
+            section_key="technical_projects",
+            section_suggestions=project_suggestions,
+            section_slots=plan.technical_project_slots,
+            bullet_bank=bullet_bank,
+            keywords=keywords,
         )
 
         payload = {
@@ -510,6 +605,118 @@ def get_suggestions(job_id: int):
 
         active_suggestions[job_id] = payload
         return jsonify(payload)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bullets/add", methods=["POST"])
+def add_user_bullets():
+    """Persist user-provided bullets to bank with keyword-derived score metadata."""
+    try:
+        data = request.json or {}
+        job_id = data.get("job_id")
+        bullets = data.get("bullets", [])
+
+        if not isinstance(job_id, int):
+            return jsonify({"error": "job_id must be an integer"}), 400
+        if not isinstance(bullets, list) or not bullets:
+            return jsonify({"error": "bullets must be a non-empty array"}), 400
+
+        conn = get_db_connection()
+        try:
+            job = get_job_by_id(conn, job_id)
+            if not job:
+                return jsonify({"error": f"Job {job_id} not found"}), 404
+
+            plan = active_plans.get(job_id)
+            keywords = active_keywords.get(job_id)
+            if plan is None or keywords is None:
+                plan, keywords = build_plan_for_job(conn, job)
+                active_plans[job_id] = plan
+                active_keywords[job_id] = keywords
+        finally:
+            conn.close()
+
+        saved = []
+        for item in bullets:
+            text = str(item.get("text", "")).strip()
+            section = str(item.get("section", "")).strip()
+            subsection = str(item.get("subsection", "")).strip()
+
+            if not text or section not in {"work_experience", "technical_projects"} or not subsection:
+                continue
+
+            score, keyword_hits = score_bullet_against_keywords(text, keywords)
+            was_new = approve_bullet_for_bank(
+                bullet_text=text,
+                section=section,
+                subsection=subsection,
+                tags=keyword_hits,
+                role_families=[str(plan.role_family)],
+                bank_path=BULLET_BANK_PATH,
+            )
+
+            saved.append({
+                "text": text,
+                "source": "story_draft",
+                "section": section,
+                "subsection": subsection,
+                "tags": keyword_hits,
+                "role_families": [str(plan.role_family)],
+                "relevance_score": score,
+                "char_count": len(text),
+                "over_soft_limit": len(text) > 110,
+                "keyword_hits": keyword_hits,
+                "rephrase_generation": 0,
+                "warnings": [],
+                "was_new": was_new,
+            })
+
+        active_suggestions.pop(job_id, None)
+        return jsonify({"saved": saved})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/plan/<int:job_id>/refresh", methods=["POST"])
+def refresh_plan(job_id: int):
+    """Rebuild and return the plan using latest bullet bank and current keywords."""
+    try:
+        conn = get_db_connection()
+        job = get_job_by_id(conn, job_id)
+        if not job:
+            conn.close()
+            return jsonify({"error": f"Job {job_id} not found"}), 404
+
+        keywords = active_keywords.get(job_id)
+        if keywords is None:
+            _, keywords = build_plan_for_job(conn, job)
+
+        role_family = classify_role_family(job["title"], job.get("job_description_raw") or job["description"])
+        seniority_level = classify_seniority(job["title"], job.get("job_description_raw") or job["description"])
+        bullet_bank = load_bullet_bank(BULLET_BANK_PATH)
+        template_map = load_template_map(TEMPLATE_MAP_PATH)
+
+        plan = build_selection_plan(
+            job=job,
+            keywords=keywords,
+            bullet_bank=bullet_bank,
+            template_map=template_map,
+            conn=conn,
+            role_family=role_family,
+            seniority_level=seniority_level,
+            user_id=DEFAULT_USER_ID,
+            hide_projects=False,
+        )
+        conn.close()
+
+        active_plans[job_id] = plan
+        active_keywords[job_id] = keywords
+        active_suggestions.pop(job_id, None)
+
+        plan_dict = plan.model_dump()
+        plan_dict["job"] = job
+        return jsonify(plan_dict)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

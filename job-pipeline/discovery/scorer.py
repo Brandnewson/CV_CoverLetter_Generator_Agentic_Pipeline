@@ -187,31 +187,33 @@ Return this exact JSON structure:
         }
 
 
-def score_pending_jobs(conn, profile: dict, client: OpenAI) -> int:
+def score_pending_jobs(conn, profile: dict, client: OpenAI, days: int | None = None) -> int:
     """
     Score all jobs in job_status where fit_score IS NULL.
-    
+
     Args:
         conn: Database connection
         profile: Scoring profile dictionary
         client: OpenAI client instance
-        
+        days: If set, only score jobs discovered within the last N days
+
     Returns:
         Number of jobs scored
     """
     config = load_config()
     scored_count = 0
     skipped_count = 0
-    
+
     with conn.cursor() as cur:
-        # Get all unscored jobs
-        cur.execute("""
+        date_filter = "AND j.date_discovered >= NOW() - INTERVAL '%s days'" % int(days) if days else ""
+        cur.execute(f"""
             SELECT j.id, j.title, j.company, j.location, j.description,
                    j.salary_min, j.salary_max
             FROM jobs j
             JOIN job_status js ON js.job_id = j.id
             WHERE js.fit_score IS NULL
               AND j.is_duplicate = FALSE
+              {date_filter}
         """)
         
         jobs = cur.fetchall()
@@ -264,36 +266,39 @@ def score_pending_jobs(conn, profile: dict, client: OpenAI) -> int:
 
 def main() -> None:
     """Main entry point for running scoring standalone."""
+    import argparse
+    parser = argparse.ArgumentParser(description="Score pending jobs")
+    parser.add_argument("--days", type=int, default=None,
+                        help="Only score jobs discovered within the last N days")
+    args = parser.parse_args()
+
     print("=" * 60)
     print("Job Pipeline - Fit Scoring")
     print("=" * 60)
-    
-    # Check for API key
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         print("ERROR: OPENAI_API_KEY not found in environment")
         return
-    
+
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
         print("ERROR: DATABASE_URL not found in environment")
         return
-    
-    # Load profile
+
     profile = load_scoring_profile()
     print(f"\nLoaded scoring profile")
     print(f"  Target roles: {len(profile.get('target_roles', []))}")
     print(f"  Must-have keywords: {len(profile.get('must_have_keywords', []))}")
+    if args.days:
+        print(f"  Filtering to last {args.days} days")
     print()
-    
-    # Create OpenAI client
+
     client = OpenAI(api_key=api_key)
-    
-    # Connect and score
     conn = psycopg2.connect(db_url)
-    
+
     try:
-        scored = score_pending_jobs(conn, profile, client)
+        scored = score_pending_jobs(conn, profile, client, days=args.days)
         print(f"\nScoring complete: {scored} jobs scored")
     finally:
         conn.close()

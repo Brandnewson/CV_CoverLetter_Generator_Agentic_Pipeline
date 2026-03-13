@@ -91,6 +91,14 @@ def load_template_map(map_path: Path) -> dict:
         return json.load(f)
 
 
+def swap_header_text(header_node: etree._Element, new_text: str) -> None:
+    """Replace all non-empty text runs in a header paragraph."""
+    for t in header_node.findall('.//w:t', NAMESPACES):
+        if t.text and t.text.strip():
+            t.text = new_text
+            new_text = ""  # only replace first populated run; blank the rest
+
+
 def swap_bullet_text(bullet_node: etree._Element, new_text: str) -> None:
     """
     Find the <w:r> run containing bullet body text (not the ▪ run).
@@ -219,6 +227,22 @@ def render_cv(
                         # XPath may be invalid or node not found
                         pass
         
+        # Step 4b: Apply header swaps (rename project titles)
+        for swap in getattr(selections, 'header_swaps', []):
+            section = swap.get('section')
+            subsection = swap.get('subsection')
+            idx = swap.get('header_xpath_index', 0)
+            new_text = swap.get('text', '')
+            if section in template_map and subsection in template_map[section]:
+                header_xpaths = template_map[section][subsection].get('header_xpaths', [])
+                if 0 <= idx < len(header_xpaths):
+                    try:
+                        nodes = root.xpath(header_xpaths[idx], namespaces=NAMESPACES)
+                        if nodes:
+                            swap_header_text(nodes[0], new_text)
+                    except Exception:
+                        pass
+
         # Step 5: For each hidden project, clear content
         for project_name in selections.hidden_projects:
             # Check both sections for hidden projects
